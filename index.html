@@ -211,7 +211,7 @@
 
       <div class="channels-sidebar">
         <div class="channels-header">
-          <span>CANALES EN VIVO</span>
+          <span>CANALES ACTIVOS</span>
           <span id="channel-count">0</span>
         </div>
         <div class="channels-list" id="channels-container">
@@ -227,12 +227,13 @@
     var video = document.getElementById('video-player');
     var hls = null;
     
-    // Base de datos de canales estables verificados con transmisiones 100% en vivo operativas
+    // Lista optimizada con canales reales que transmiten en vivo y abren correctamente en navegadores y móviles
     var listaCanalesGlobal = [
       { nombre: "El Doce (Córdoba)", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205141/el-doce-cordoba/index.m3u8" },
       { nombre: "Telefe Córdoba", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205143/telefe-cordoba/index.m3u8" },
       { nombre: "LN+ (La Nación Más)", pais: "AR", categoria: "Noticias", url: "https://lnmas.gcs.com.ar/live/lnmas/index.m3u8" },
       { nombre: "TN (Todo Noticias)", pais: "AR", categoria: "Noticias", url: "https://stream.crtv.com.ar/live/tn/index.m3u8" },
+      { nombre: "TeleSur English", pais: "VE", categoria: "Noticias", url: "https://svs.itntrade.ru/telesur/index.m3u8" },
       { nombre: "NASA TV HD", pais: "US", categoria: "Ciencia", url: "https://ntv1.nasa.gov/hls/live/509503/NASA-NTV1-HLS/master.m3u8" },
       { nombre: "France 24 English", pais: "FR", categoria: "Noticias", url: "https://static.france24.com/live/F24_EN_HI_HLS/live_web.m3u8" },
       { nombre: "France 24 Español", pais: "FR", categoria: "Noticias", url: "https://static.france24.com/live/F24_ES_HI_HLS/live_web.m3u8" },
@@ -247,7 +248,6 @@
     ];
 
     function inicializarTelebacus() {
-      // Poblar el selector de países dinámicamente según la lista
       const select = document.getElementById('country-select');
       const paisesUnicos = Array.from(new Set(listaCanalesGlobal.map(c => c.pais))).sort();
       
@@ -317,7 +317,6 @@
       }
 
       var streamUrl = canal.url;
-      // Proxy automático si alguna señal requiere evitar bloqueos de protocolo
       if (streamUrl.startsWith('http://')) {
         streamUrl = 'https://corsproxy.io/?' + encodeURIComponent(streamUrl);
       }
