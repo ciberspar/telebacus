@@ -34,3 +34,7 @@
 ## ⚠️ Nota Legal
 
 Este proyecto ha sido desarrollado exclusivamente con fines educativos y de experimentación técnica sobre reproducción de video en la web. Las transmisiones enlazadas pertenecen a señales de emisión abierta y de dominio público proporcionadas por fuentes de internet abiertas.
+
+## 📄 Licencia
+
+Este proyecto está bajo los términos de la **Licencia MIT**. Consultá el archivo `LICENSE` para más detalles.
