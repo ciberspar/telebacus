@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>telebacus // Global Live TV</title>
 
-  <!-- HLS.js para reproducción de streams M3U8 -->
+  <!-- HLS.js para navegadores de escritorio -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -107,7 +107,7 @@
       align-items: center;
       gap: 10px;
       backdrop-filter: blur(8px);
-      pointer-events: none;
+      z-index: 5;
     }
 
     .channel-info-overlay span {
@@ -206,7 +206,7 @@
         <div class="channel-info-overlay" id="current-info" style="display: none;">
           <span id="current-title">Sintonizando...</span>
         </div>
-        <video id="video-player" controls autoplay playsinline></video>
+        <video id="video-player" controls autoplay playsinline webkit-playsinline></video>
       </div>
 
       <div class="channels-sidebar">
@@ -225,10 +225,9 @@
 
   <script>
     var video = document.getElementById('video-player');
-    var hls = new Hls();
+    var hls = null;
     var listaCanalesGlobal = [];
 
-    // Usamos el índice maestro global optimizado de IPTV-ORG
     var MASTER_INDEX = 'https://iptv-org.github.io/api/channels.json';
     var MASTER_STREAMS = 'https://iptv-org.github.io/api/streams.json';
 
@@ -250,7 +249,6 @@
           if (ch.country) countrySet.add(ch.country);
         });
 
-        // Poblar el selector de países ordenados
         const select = document.getElementById('country-select');
         Array.from(countrySet).sort().forEach(code => {
           var opt = document.createElement('option');
@@ -259,9 +257,9 @@
           select.appendChild(opt);
         });
 
-        // Mapear streams activos globales
+        // Tomamos todos los canales que tengan un stream asignado
         listaCanalesGlobal = streams
-          .filter(st => channelMap.has(st.channel))
+          .filter(st => st.url && channelMap.has(st.channel))
           .map(st => {
             const info = channelMap.get(st.channel);
             return {
@@ -281,27 +279,6 @@
         }
       } catch (err) {
         console.error('Error de red:', err);
-        // Lista masiva de respaldo internacional si la red móvil bloquea los JSON pesados
-        listaCanalesGlobal = [
-          { nombre: "El Doce (Córdoba)", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205141/el-doce-cordoba/index.m3u8" },
-          { nombre: "Telefe Córdoba", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205143/telefe-cordoba/index.m3u8" },
-          { nombre: "NASA TV HD", pais: "US", categoria: "Ciencia", url: "https://ntv1.nasa.gov/hls/live/509503/NASA-NTV1-HLS/master.m3u8" },
-          { nombre: "France 24 English", pais: "FR", categoria: "Noticias", url: "https://static.france24.com/live/F24_EN_HI_HLS/live_web.m3u8" },
-          { nombre: "DW English", pais: "DE", categoria: "Noticias", url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8" },
-          { nombre: "Al Jazeera English", pais: "QA", categoria: "Noticias", url: "https://live-hls-web-aje.getaj.net/AJE/03.m3u8" }
-        ];
-        
-        // Agregar opciones al selector con el respaldo
-        const select = document.getElementById('country-select');
-        ['AR', 'US', 'FR', 'DE', 'QA'].forEach(c => {
-          var opt = document.createElement('option');
-          opt.value = c;
-          opt.textContent = c;
-          select.appendChild(opt);
-        });
-
-        aplicarFiltros();
-        reproducirCanal(listaCanalesGlobal[0]);
       }
     }
 
@@ -352,18 +329,32 @@
       document.getElementById('current-info').style.display = 'flex';
       document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
 
-      if (Hls.isSupported()) {
+      if (hls) {
         hls.destroy();
-        hls = new Hls();
-        hls.loadSource(canal.url);
+        hls = null;
+      }
+
+      // Envolvemos la URL del stream a través de un proxy abierto para evitar bloqueos CORS y protocolos HTTP
+      var streamUrl = canal.url;
+      if (streamUrl.startsWith('http://')) {
+        streamUrl = 'https://corsproxy.io/?' + encodeURIComponent(streamUrl);
+      }
+
+      if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = streamUrl;
+        video.load();
+        video.play().catch(() => console.log('Reproducción manual requerida'));
+      } else if (Hls.isSupported()) {
+        hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        hls.loadSource(streamUrl);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          video.play().catch(() => console.log('Autoplay bloqueado'));
+          video.play().catch(() => console.log('Interacción requerida'));
         });
-      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = canal.url;
-        video.addEventListener('loadedmetadata', function() {
-          video.play();
+        hls.on(Hls.Events.ERROR, function (event, data) {
+          if (data.fatal) {
+            document.getElementById('current-title').textContent = canal.nombre + ' (Señal caída)';
+          }
         });
       }
     }
