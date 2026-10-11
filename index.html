@@ -33,42 +33,43 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      padding: 0 15px;
+      padding: 0 12px;
       box-shadow: 0 0 15px rgba(0, 243, 255, 0.2);
       z-index: 10;
-      gap: 10px;
+      gap: 6px;
     }
 
     .brand-title {
       font-family: monospace;
       font-weight: bold;
-      font-size: 1rem;
+      font-size: 0.95rem;
       letter-spacing: 1px;
       color: #00f3ff;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 6px;
       white-space: nowrap;
     }
 
     .header-controls {
       display: flex;
-      gap: 8px;
+      gap: 6px;
       align-items: center;
     }
 
-    .search-box {
+    .select-box, .search-box {
       background: rgba(0, 243, 255, 0.05);
       border: 1px solid rgba(0, 243, 255, 0.4);
       color: #fff;
-      padding: 6px 12px;
+      padding: 6px 8px;
       border-radius: 6px;
       font-family: monospace;
       outline: none;
-      font-size: 0.85rem;
-      width: 160px;
+      font-size: 0.75rem;
     }
-    .search-box:focus { border-color: #00f3ff; }
+    .select-box option { background: #050c19; color: #fff; }
+    .search-box { width: 110px; }
+    .select-box { width: 110px; }
 
     .main-content {
       display: flex;
@@ -111,7 +112,7 @@
 
     .channel-info-overlay span {
       font-weight: bold;
-      font-size: 0.9rem;
+      font-size: 0.85rem;
       color: #fff;
     }
 
@@ -150,9 +151,7 @@
       cursor: pointer;
       transition: background 0.2s ease;
     }
-    .channel-card:hover {
-      background: rgba(0, 243, 255, 0.1);
-    }
+    .channel-card:hover { background: rgba(0, 243, 255, 0.1); }
     .channel-card.active {
       background: rgba(0, 243, 255, 0.25);
       border-left: 3px solid #00f3ff;
@@ -177,12 +176,13 @@
     }
 
     @media (max-width: 768px) {
-      header { padding: 0 10px; }
-      .brand-title { font-size: 0.85rem; }
+      header { padding: 0 8px; }
+      .brand-title { font-size: 0.8rem; }
       .main-content { flex-direction: column; }
       .video-section { height: 40vh; flex: none; }
       .channels-sidebar { width: 100%; flex: 1; border-left: none; border-top: 1px solid rgba(0, 243, 255, 0.2); }
-      .search-box { width: 130px; }
+      .search-box { width: 95px; }
+      .select-box { width: 95px; }
     }
   </style>
 </head>
@@ -194,7 +194,10 @@
         <span>📡</span> telebacus
       </div>
       <div class="header-controls">
-        <input type="text" id="search-input" class="search-box" placeholder="Buscar canal..." autocomplete="off">
+        <select id="country-select" class="select-box">
+          <option value="ALL">🌎 Todos</option>
+        </select>
+        <input type="text" id="search-input" class="search-box" placeholder="Buscar..." autocomplete="off">
       </div>
     </header>
 
@@ -208,12 +211,12 @@
 
       <div class="channels-sidebar">
         <div class="channels-header">
-          <span>CANALES DISPONIBLES</span>
+          <span>CANALES</span>
           <span id="channel-count">0</span>
         </div>
         <div class="channels-list" id="channels-container">
           <div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-            Conectando a la red telebacus...
+            Cargando red global telebacus...
           </div>
         </div>
       </div>
@@ -225,33 +228,38 @@
     var hls = new Hls();
     var listaCanalesGlobal = [];
 
-    // Usamos una API JSON optimizada y directa de canales abiertos globales estables
-    var API_CHANNELS = 'https://iptv-org.github.io/api/channels.json';
-    var API_STREAMS = 'https://iptv-org.github.io/api/streams.json';
+    // Usamos el índice maestro global optimizado de IPTV-ORG
+    var MASTER_INDEX = 'https://iptv-org.github.io/api/channels.json';
+    var MASTER_STREAMS = 'https://iptv-org.github.io/api/streams.json';
 
-    async function cargarTelebacus() {
+    async function cargarTelebacusGlobal() {
       try {
-        // Hacemos un timeout de seguridad para que no se quede colgado si la red falla
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 8000);
-
         const [resChannels, resStreams] = await Promise.all([
-          fetch(API_CHANNELS, { signal: controller.signal }),
-          fetch(API_STREAMS, { signal: controller.signal })
+          fetch(MASTER_INDEX),
+          fetch(MASTER_STREAMS)
         ]);
-        clearTimeout(timeoutId);
 
         const channels = await resChannels.json();
         const streams = await resStreams.json();
 
         const channelMap = new Map();
+        const countrySet = new Set();
+
         channels.forEach(ch => {
-          if (ch.is_general || ch.country || ch.name) {
-            channelMap.set(ch.id, ch);
-          }
+          channelMap.set(ch.id, ch);
+          if (ch.country) countrySet.add(ch.country);
         });
 
-        // Vincular stream con nombre de canal y filtrar los primeros 300 canales activos y estables
+        // Poblar el selector de países ordenados
+        const select = document.getElementById('country-select');
+        Array.from(countrySet).sort().forEach(code => {
+          var opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = code.toUpperCase();
+          select.appendChild(opt);
+        });
+
+        // Mapear streams activos globales
         listaCanalesGlobal = streams
           .filter(st => channelMap.has(st.channel))
           .map(st => {
@@ -259,30 +267,40 @@
             return {
               id: st.channel,
               nombre: info.name,
-              pais: info.country || 'GLOBAL',
-              categoria: info.categories && info.categories.length > 0 ? info.categories[0] : 'TV',
+              pais: info.country || 'INT',
+              categoria: info.categories && info.categories.length > 0 ? info.categories[0] : 'General',
               url: st.url
             };
           })
-          .filter((v, i, a) => a.findIndex(t => t.nombre === v.nombre) === i)
-          .slice(0, 350); // Límite optimizado para velocidad absoluta en celular
+          .filter((v, i, a) => a.findIndex(t => t.nombre === v.nombre) === i);
 
-        renderizarCanales(listaCanalesGlobal);
+        aplicarFiltros();
 
         if (listaCanalesGlobal.length > 0) {
           reproducirCanal(listaCanalesGlobal[0]);
         }
       } catch (err) {
-        console.error('Error:', err);
-        // Respaldo de emergencia si falla la API principal: canales públicos globales estables directos
+        console.error('Error de red:', err);
+        // Lista masiva de respaldo internacional si la red móvil bloquea los JSON pesados
         listaCanalesGlobal = [
-          { nombre: "NASA TV HD", pais: "USA", categoria: "Ciencia", url: "https://ntv1.nasa.gov/hls/live/509503/NASA-NTV1-HLS/master.m3u8" },
+          { nombre: "El Doce (Córdoba)", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205141/el-doce-cordoba/index.m3u8" },
+          { nombre: "Telefe Córdoba", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205143/telefe-cordoba/index.m3u8" },
+          { nombre: "NASA TV HD", pais: "US", categoria: "Ciencia", url: "https://ntv1.nasa.gov/hls/live/509503/NASA-NTV1-HLS/master.m3u8" },
           { nombre: "France 24 English", pais: "FR", categoria: "Noticias", url: "https://static.france24.com/live/F24_EN_HI_HLS/live_web.m3u8" },
           { nombre: "DW English", pais: "DE", categoria: "Noticias", url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8" },
-          { nombre: "Al Jazeera English", pais: "QA", categoria: "Noticias", url: "https://live-hls-web-aje.getaj.net/AJE/03.m3u8" },
-          { nombre: "Bloomberg TV+", pais: "USA", categoria: "Negocios", url: "https://bloomberg.com/media-manifest/streams/us-live.m3u8" }
+          { nombre: "Al Jazeera English", pais: "QA", categoria: "Noticias", url: "https://live-hls-web-aje.getaj.net/AJE/03.m3u8" }
         ];
-        renderizarCanales(listaCanalesGlobal);
+        
+        // Agregar opciones al selector con el respaldo
+        const select = document.getElementById('country-select');
+        ['AR', 'US', 'FR', 'DE', 'QA'].forEach(c => {
+          var opt = document.createElement('option');
+          opt.value = c;
+          opt.textContent = c;
+          select.appendChild(opt);
+        });
+
+        aplicarFiltros();
         reproducirCanal(listaCanalesGlobal[0]);
       }
     }
@@ -293,7 +311,7 @@
       container.innerHTML = '';
 
       if (canales.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">Sin señales disponibles.</div>';
+        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron transmisiones.</div>';
         return;
       }
 
@@ -310,16 +328,29 @@
         card.onclick = function() {
           document.querySelectorAll('.channel-card').forEach(el => el.classList.remove('active'));
           card.classList.add('active');
-            reproducirCanal(canal);
+          reproducirCanal(canal);
         };
 
         container.appendChild(card);
       });
     }
 
+    function aplicarFiltros() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const paisSeleccionado = document.getElementById('country-select').value;
+
+      const filtrados = listaCanalesGlobal.filter(c => {
+        const coincideTexto = c.nombre.toLowerCase().includes(query) || c.categoria.toLowerCase().includes(query);
+        const coincidePais = (paisSeleccionado === 'ALL' || c.pais === paisSeleccionado);
+        return coincideTexto && coincidePais;
+      });
+
+      renderizarCanales(filtrados);
+    }
+
     function reproducirCanal(canal) {
       document.getElementById('current-info').style.display = 'flex';
-      document.getElementById('current-title').textContent = canal.nombre;
+      document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
 
       if (Hls.isSupported()) {
         hls.destroy();
@@ -327,7 +358,7 @@
         hls.loadSource(canal.url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          video.play().catch(() => console.log('Autoplay requerido por gesto'));
+          video.play().catch(() => console.log('Autoplay bloqueado'));
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = canal.url;
@@ -337,17 +368,10 @@
       }
     }
 
-    document.getElementById('search-input').addEventListener('input', function(e) {
-      const query = e.target.value.toLowerCase();
-      const filtrados = listaCanalesGlobal.filter(c => 
-        c.nombre.toLowerCase().includes(query) || 
-        c.categoria.toLowerCase().includes(query) ||
-        c.pais.toLowerCase().includes(query)
-      );
-      renderizarCanales(filtrados);
-    });
+    document.getElementById('search-input').addEventListener('input', aplicarFiltros);
+    document.getElementById('country-select').addEventListener('change', aplicarFiltros);
 
-    cargarTelebacus();
+    cargarTelebacusGlobal();
   </script>
 </body>
 </html>
