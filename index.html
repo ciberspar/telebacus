@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>telebacus // Live Global TV Grid</title>
+  <title>telebacus // Live Dynamic Grid</title>
 
-  <!-- Reproductor HLS para navegadores compatibles -->
+  <!-- HLS.js para navegadores que lo requieran -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -211,12 +211,12 @@
 
       <div class="channels-sidebar">
         <div class="channels-header">
-          <span>CANALES EN VIVO</span>
+          <span>CANALES API</span>
           <span id="channel-count">0</span>
         </div>
         <div class="channels-list" id="channels-container">
           <div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;">
-            Conectando red telebacus...
+            Consultando API IPTV-ORG...
           </div>
         </div>
       </div>
@@ -226,40 +226,66 @@
   <script>
     var video = document.getElementById('video-player');
     var hls = null;
-    
-    // Lista verificada con señales HTTPS directas sin bloqueos CORS de emisión en vivo permanente
-    var listaCanalesGlobal = [
-      { nombre: "El Doce (Córdoba)", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205141/el-doce-cordoba/index.m3u8" },
-      { nombre: "Telefe Córdoba", pais: "AR", categoria: "General", url: "https://live-hls.clarovideo.net/hls/live/205143/telefe-cordoba/index.m3u8" },
-      { nombre: "LN+ (La Nación Más)", pais: "AR", categoria: "Noticias", url: "https://lnmas.gcs.com.ar/live/lnmas/index.m3u8" },
-      { nombre: "TN (Todo Noticias)", pais: "AR", categoria: "Noticias", url: "https://stream.crtv.com.ar/live/tn/index.m3u8" },
-      { nombre: "NASA TV Space Live", pais: "US", categoria: "Ciencia", url: "https://ntv1.nasa.gov/hls/live/509503/NASA-NTV1-HLS/master.m3u8" },
-      { nombre: "France 24 Español", pais: "FR", categoria: "Noticias", url: "https://static.france24.com/live/F24_ES_HI_HLS/live_web.m3u8" },
-      { nombre: "France 24 English", pais: "FR", categoria: "Noticias", url: "https://static.france24.com/live/F24_EN_HI_HLS/live_web.m3u8" },
-      { nombre: "DW Español", pais: "DE", categoria: "Noticias", url: "https://dwamdstream104.akamaized.net/hls/live/2015526/dwstream104/index.m3u8" },
-      { nombre: "DW English", pais: "DE", categoria: "Noticias", url: "https://dwamdstream102.akamaized.net/hls/live/2015525/dwstream102/index.m3u8" },
-      { nombre: "Al Jazeera English", pais: "QA", categoria: "Noticias", url: "https://live-hls-web-aje.getaj.net/AJE/03.m3u8" },
-      { nombre: "Bloomberg TV", pais: "US", categoria: "Negocios", url: "https://bloomberg.com/media-manifest/streams/us-live.m3u8" },
-      { nombre: "Red Bull Sports", pais: "AT", categoria: "Deportes", url: "https://rbmn-live.akamaized.net/hls/live/590964/BoRB-AT-hd/master.m3u8" },
-      { nombre: "Euronews English", pais: "EU", categoria: "Noticias", url: "https://euronews-euronews-1-eu.rakuten.wurl.tv/playlist.m3u8" },
-      { nombre: "TRT World HD", pais: "TR", categoria: "Noticias", url: "https://tv-trtworld.medya.trt.com.tr/master.m3u8" },
-      { nombre: "NHK World Japan", pais: "JP", categoria: "Noticias", url: "https://nhkworld.hd.live.streambox.com/playlist.m3u8" }
-    ];
+    var listaCanalesGlobal = [];
 
-    function inicializarTelebacus() {
-      const select = document.getElementById('country-select');
-      const paisesUnicos = Array.from(new Set(listaCanalesGlobal.map(c => c.pais))).sort();
-      
-      paisesUnicos.forEach(code => {
-        var opt = document.createElement('option');
-        opt.value = code;
-        opt.textContent = code;
-        select.appendChild(opt);
-      });
+    // Endpoints oficiales de IPTV-ORG
+    var API_CHANNELS = 'https://iptv-org.github.io/api/channels.json';
+    var API_STREAMS = 'https://iptv-org.github.io/api/streams.json';
 
-      aplicarFiltros();
-      if (listaCanalesGlobal.length > 0) {
-        reproducirCanal(listaCanalesGlobal[0]);
+    async function consumirApiGlobal() {
+      try {
+        const [resChannels, resStreams] = await Promise.all([
+          fetch(API_CHANNELS),
+          fetch(API_STREAMS)
+        ]);
+
+        const channels = await resChannels.json();
+        const streams = await resStreams.json();
+
+        const channelMap = new Map();
+        const countrySet = new Set();
+
+        channels.forEach(ch => {
+          if (ch.id) {
+            channelMap.set(ch.id, ch);
+            if (ch.country) countrySet.add(ch.country);
+          }
+        });
+
+        // Llenar el selector de países dinámicamente con la respuesta de la API
+        const select = document.getElementById('country-select');
+        Array.from(countrySet).sort().forEach(code => {
+          var opt = document.createElement('option');
+          opt.value = code;
+          opt.textContent = code.toUpperCase();
+          select.appendChild(opt);
+        });
+
+        // Filtrado dinámico de la API: solo streams HTTPS para evitar bloqueos en iOS y GitHub Pages
+        listaCanalesGlobal = streams
+          .filter(st => st.url && st.url.startsWith('https://') && channelMap.has(st.channel))
+          .map(st => {
+            const info = channelMap.get(st.channel);
+            return {
+              id: st.channel,
+              nombre: info.name || st.channel,
+              pais: info.country || 'INT',
+              categoria: info.categories && info.categories.length > 0 ? info.categories[0] : 'General',
+              url: st.url
+            };
+          })
+          // Filtrar duplicados por nombre
+          .filter((v, i, a) => a.findIndex(t => t.nombre === v.nombre) === i);
+
+        aplicarFiltros();
+
+        if (listaCanalesGlobal.length > 0) {
+          reproducirCanal(listaCanalesGlobal[0]);
+        }
+      } catch (err) {
+        console.error('Error al conectar con la API:', err);
+        document.getElementById('channels-container').innerHTML = 
+          '<div style="padding: 20px; color: #ff3366; font-size: 0.85rem;">Error de conexión con la API de canales.</div>';
       }
     }
 
@@ -269,7 +295,7 @@
       container.innerHTML = '';
 
       if (canales.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No hay canales en este país.</div>';
+        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales válidos.</div>';
         return;
       }
 
@@ -315,30 +341,45 @@
         hls = null;
       }
 
-      // iOS Safari (iPhone) utiliza reproducción nativa de HLS
+      // Reproducción nativa en Safari iOS
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = canal.url;
         video.load();
         var playPromise = video.play();
         if (playPromise !== undefined) {
           playPromise.catch(() => {
-            console.log('Tocar el video para iniciar la transmisión');
+            console.log('Interacción requerida para iniciar video');
           });
         }
-      } else if (Hls.isSupported()) {
+      } 
+      // HLS.js para navegadores de escritorio
+      else if (Hls.isSupported()) {
         hls = new Hls({ enableWorker: true, lowLatencyMode: true });
         hls.loadSource(canal.url);
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
           video.play().catch(() => console.log('Interacción requerida'));
         });
+        hls.on(Hls.Events.ERROR, function (event, data) {
+          if (data.fatal) {
+            document.getElementById('current-title').textContent = canal.nombre + ' (Señal no disponible)';
+          }
+        });
       }
     }
+
+    // Notificación en pantalla si la señal elegida de la API está caída
+    video.addEventListener('error', function() {
+      const currentTitle = document.getElementById('current-title');
+      if (currentTitle && !currentTitle.textContent.includes('Bloqueada')) {
+        currentTitle.textContent += ' (Señal caída o bloqueada)';
+      }
+    });
 
     document.getElementById('search-input').addEventListener('input', aplicarFiltros);
     document.getElementById('country-select').addEventListener('change', aplicarFiltros);
 
-    window.onload = inicializarTelebacus;
+    window.onload = consumirApiGlobal;
   </script>
 </body>
 </html>
