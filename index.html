@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>telebacus // Global Live TV</title>
+  <title>telebacus // Global Live TV Pro</title>
 
-  <!-- HLS.js para compatibilidad de streaming -->
+  <!-- HLS.js para compatibilidad total de streaming -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -14,7 +14,7 @@
       margin: 0; padding: 0;
       width: 100%; height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #090d16;
+      background: #060913;
       color: #00f3ff;
       overflow: hidden;
     }
@@ -211,12 +211,12 @@
 
       <div class="channels-sidebar">
         <div class="channels-header">
-          <span>CANALES GLOBALES</span>
+          <span>SEÑALES ACTIVAS</span>
           <span id="channel-count">0</span>
         </div>
         <div class="channels-list" id="channels-container">
           <div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;" id="loading-text">
-            Filtrando señales estables de la API...
+            Cargando motor de alta estabilidad...
           </div>
         </div>
       </div>
@@ -230,7 +230,7 @@
 
     async function inicializarTelebacus() {
       try {
-        document.getElementById('loading-text').textContent = 'Conectando con API global...';
+        document.getElementById('loading-text').textContent = 'Sincronizando con red global...';
         
         const [channelsRes, streamsRes] = await Promise.all([
           fetch('https://iptv-org.github.io/api/channels.json'),
@@ -241,11 +241,9 @@
         const streamsData = await streamsRes.json();
 
         const streamMap = {};
+        // Filtramos estrictamente flujos que terminen en m3u8 o sean HTTPS directos para evitar enlaces muertos
         streamsData.forEach(s => {
-          // Priorizamos enlaces HTTPS directos que suelen ser mucho más estables
-          if (s.url && !streamMap[s.channel]) {
-            streamMap[s.channel] = s.url;
-          } else if (s.url && s.url.startsWith('https://') && !streamMap[s.channel]) {
+          if (s.url && (s.url.includes('.m3u8') || s.url.startsWith('https://')) && !streamMap[s.channel]) {
             streamMap[s.channel] = s.url;
           }
         });
@@ -259,7 +257,7 @@
             url: streamMap[c.id]
           }));
 
-        // Ordenar alfabéticamente para mejor experiencia
+        // Orden alfabético para encontrar canales rápidamente
         listaCanalesGlobal.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         const select = document.getElementById('country-select');
@@ -278,10 +276,10 @@
         }
 
       } catch (error) {
-        console.error('Error al cargar la API:', error);
+        console.error('Error al conectar:', error);
         document.getElementById('channels-container').innerHTML = `
           <div style="padding: 20px; text-align: center; color: #ff4a4a; font-size: 0.85rem;">
-            Error al conectar con la API global. Revisa tu conexión.
+            Error al conectar con la red. Verifica tu conexión a internet.
           </div>`;
       }
     }
@@ -292,11 +290,11 @@
       container.innerHTML = '';
 
       if (canales.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales.</div>';
+        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales activos.</div>';
         return;
       }
 
-      canales.slice(0, 200).forEach((canal, index) => {
+      canales.slice(0, 250).forEach((canal, index) => {
         const card = document.createElement('div');
         card.className = 'channel-card' + (index === 0 ? ' active' : '');
         card.innerHTML = `
@@ -331,7 +329,7 @@
 
     function reproducirCanal(canal) {
       document.getElementById('current-info').style.display = 'flex';
-      document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
+      document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + '] (Conectando...)';
 
       if (hls) {
         hls.destroy();
@@ -339,6 +337,7 @@
       }
 
       var streamUrl = canal.url;
+      // Si la fuente usa HTTP plano, aplicamos proxy automático para prevenir bloqueos del navegador
       if (streamUrl.startsWith('http://')) {
         streamUrl = 'https://corsproxy.io/?' + encodeURIComponent(streamUrl);
       }
@@ -346,15 +345,29 @@
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = streamUrl;
         video.load();
-        video.play().catch(() => console.log('Reproducción manual requerida'));
+        video.play().then(() => {
+          document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
+        }).catch(() => {
+          document.getElementById('current-title').textContent = canal.nombre + ' (Señal restringida o caída)';
+        });
       } 
       else if (Hls.isSupported()) {
-        hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        hls = new Hls({ 
+          enableWorker: true, 
+          lowLatencyMode: true,
+          backBufferLength: 90 
+        });
         hls.loadSource(streamUrl);
         hls.attachMedia(video);
+        
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
-          video.play().catch(() => console.log('Interacción requerida'));
+          video.play().then(() => {
+            document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
+          }).catch(() => {
+            document.getElementById('current-title').textContent = canal.nombre + ' (Clic en play requerido)';
+          });
         });
+
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
             document.getElementById('current-title').textContent = canal.nombre + ' (Señal fuera de línea)';
