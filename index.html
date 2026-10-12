@@ -216,7 +216,7 @@
         </div>
         <div class="channels-list" id="channels-container">
           <div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;" id="loading-text">
-            Cargando red telebacus desde API...
+            Filtrando señales estables de la API...
           </div>
         </div>
       </div>
@@ -242,7 +242,10 @@
 
         const streamMap = {};
         streamsData.forEach(s => {
+          // Priorizamos enlaces HTTPS directos que suelen ser mucho más estables
           if (s.url && !streamMap[s.channel]) {
+            streamMap[s.channel] = s.url;
+          } else if (s.url && s.url.startsWith('https://') && !streamMap[s.channel]) {
             streamMap[s.channel] = s.url;
           }
         });
@@ -255,6 +258,9 @@
             categoria: (c.categories && c.categories.length > 0) ? c.categories[0] : 'General',
             url: streamMap[c.id]
           }));
+
+        // Ordenar alfabéticamente para mejor experiencia
+        listaCanalesGlobal.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         const select = document.getElementById('country-select');
         const paisesUnicos = Array.from(new Set(listaCanalesGlobal.map(c => c.pais))).sort();
