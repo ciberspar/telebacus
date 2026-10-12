@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>telebacus // Global Live TV Pro</title>
+  <title>telebacus // Global Live TV</title>
 
-  <!-- HLS.js para compatibilidad total de streaming -->
+  <!-- HLS.js para compatibilidad de streaming -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
   <style>
@@ -14,7 +14,7 @@
       margin: 0; padding: 0;
       width: 100%; height: 100%;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-      background: #060913;
+      background: #090d16;
       color: #00f3ff;
       overflow: hidden;
     }
@@ -94,6 +94,60 @@
       max-height: 100%;
       object-fit: contain;
       background: #000;
+      z-index: 1;
+    }
+
+    /* Pantalla de Error / Estática con la Tortuga */
+    .error-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: #050c19;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 3;
+      gap: 12px;
+      display: none; /* Oculto por defecto */
+    }
+
+    .turtle-container {
+      position: relative;
+      font-size: 4rem;
+      animation: temblor 0.2s infinite ease-in-out;
+    }
+
+    .error-badge {
+      position: absolute;
+      bottom: -5px; right: -5px;
+      background: #ff4a4a;
+      color: #fff;
+      font-size: 1.2rem;
+      border-radius: 50%;
+      width: 25px; height: 25px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: monospace;
+      font-weight: bold;
+      border: 2px solid #050c19;
+    }
+
+    .error-text {
+      font-family: monospace;
+      font-size: 0.9rem;
+      color: #ff4a4a;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    @keyframes temblor {
+      0% { transform: translate(0, 0) rotate(0deg); }
+      20% { transform: translate(-2px, 2px) rotate(-1deg); }
+      40% { transform: translate(-1px, -2px) rotate(1deg); }
+      60% { transform: translate(2px, 1px, 0) rotate(0deg); }
+      80% { transform: translate(1px, -1px) rotate(-1deg); }
+      100% { transform: translate(0, 0) rotate(0deg); }
     }
 
     .channel-info-overlay {
@@ -203,6 +257,15 @@
 
     <div class="main-content">
       <div class="video-section">
+        <!-- Overlay de error con la Tortuga y estática -->
+        <div class="error-overlay" id="error-screen">
+          <div class="turtle-container">
+            🐢
+            <div class="error-badge">❌</div>
+          </div>
+          <div class="error-text">Señal caída o fuera de línea</div>
+        </div>
+
         <div class="channel-info-overlay" id="current-info" style="display: none;">
           <span id="current-title">Sintonizando...</span>
         </div>
@@ -211,12 +274,12 @@
 
       <div class="channels-sidebar">
         <div class="channels-header">
-          <span>SEÑALES ACTIVAS</span>
+          <span>CANALES SEGUROS (HTTPS)</span>
           <span id="channel-count">0</span>
         </div>
         <div class="channels-list" id="channels-container">
           <div style="padding: 20px; text-align: center; color: #94a3b8; font-size: 0.85rem;" id="loading-text">
-            Cargando motor de alta estabilidad...
+            Cargando fuentes HLS de la API...
           </div>
         </div>
       </div>
@@ -225,12 +288,13 @@
 
   <script>
     var video = document.getElementById('video-player');
+    var errorScreen = document.getElementById('error-screen');
     var hls = null;
     var listaCanalesGlobal = [];
 
     async function inicializarTelebacus() {
       try {
-        document.getElementById('loading-text').textContent = 'Sincronizando con red global...';
+        document.getElementById('loading-text').textContent = 'Obteniendo canales compatibles con HTTPS...';
         
         const [channelsRes, streamsRes] = await Promise.all([
           fetch('https://iptv-org.github.io/api/channels.json'),
@@ -241,9 +305,9 @@
         const streamsData = await streamsRes.json();
 
         const streamMap = {};
-        // Filtramos estrictamente flujos que terminen en m3u8 o sean HTTPS directos para evitar enlaces muertos
+        
         streamsData.forEach(s => {
-          if (s.url && (s.url.includes('.m3u8') || s.url.startsWith('https://')) && !streamMap[s.channel]) {
+          if (s.url && s.url.startsWith('https://') && s.url.includes('.m3u8') && !streamMap[s.channel]) {
             streamMap[s.channel] = s.url;
           }
         });
@@ -257,7 +321,6 @@
             url: streamMap[c.id]
           }));
 
-        // Orden alfabético para encontrar canales rápidamente
         listaCanalesGlobal.sort((a, b) => a.nombre.localeCompare(b.nombre));
 
         const select = document.getElementById('country-select');
@@ -276,10 +339,10 @@
         }
 
       } catch (error) {
-        console.error('Error al conectar:', error);
+        console.error('Error al cargar la API:', error);
         document.getElementById('channels-container').innerHTML = `
           <div style="padding: 20px; text-align: center; color: #ff4a4a; font-size: 0.85rem;">
-            Error al conectar con la red. Verifica tu conexión a internet.
+            Error al conectar con la API global. Revisa tu conexión.
           </div>`;
       }
     }
@@ -290,11 +353,11 @@
       container.innerHTML = '';
 
       if (canales.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales activos.</div>';
+        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales HTTPS.</div>';
         return;
       }
 
-      canales.slice(0, 250).forEach((canal, index) => {
+      canales.slice(0, 200).forEach((canal, index) => {
         const card = document.createElement('div');
         card.className = 'channel-card' + (index === 0 ? ' active' : '');
         card.innerHTML = `
@@ -327,9 +390,19 @@
       renderizarCanales(filtrados);
     }
 
+    function mostrarErrorTortuga(mensaje) {
+      errorScreen.style.display = 'flex';
+      document.getElementById('current-title').textContent = mensaje;
+    }
+
+    function ocultarErrorTortuga() {
+      errorScreen.style.display = 'none';
+    }
+
     function reproducirCanal(canal) {
       document.getElementById('current-info').style.display = 'flex';
-      document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + '] (Conectando...)';
+      document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + '] (Cargando...)';
+      ocultarErrorTortuga();
 
       if (hls) {
         hls.destroy();
@@ -337,10 +410,6 @@
       }
 
       var streamUrl = canal.url;
-      // Si la fuente usa HTTP plano, aplicamos proxy automático para prevenir bloqueos del navegador
-      if (streamUrl.startsWith('http://')) {
-        streamUrl = 'https://corsproxy.io/?' + encodeURIComponent(streamUrl);
-      }
 
       if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = streamUrl;
@@ -348,15 +417,11 @@
         video.play().then(() => {
           document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
         }).catch(() => {
-          document.getElementById('current-title').textContent = canal.nombre + ' (Señal restringida o caída)';
+          mostrarErrorTortuga(canal.nombre + ' (Señal bloqueada)');
         });
       } 
       else if (Hls.isSupported()) {
-        hls = new Hls({ 
-          enableWorker: true, 
-          lowLatencyMode: true,
-          backBufferLength: 90 
-        });
+        hls = new Hls({ enableWorker: true, lowLatencyMode: true });
         hls.loadSource(streamUrl);
         hls.attachMedia(video);
         
@@ -364,13 +429,13 @@
           video.play().then(() => {
             document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
           }).catch(() => {
-            document.getElementById('current-title').textContent = canal.nombre + ' (Clic en play requerido)';
+            mostrarErrorTortuga(canal.nombre + ' (Clic para reproducir)');
           });
         });
 
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
-            document.getElementById('current-title').textContent = canal.nombre + ' (Señal fuera de línea)';
+            mostrarErrorTortuga(canal.nombre + ' (Fuera de línea)');
           }
         });
       }
