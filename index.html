@@ -53,23 +53,24 @@
 
     .header-controls {
       display: flex;
-      gap: 6px;
+      gap: 5px;
       align-items: center;
     }
 
-    .select-box, .search-box {
+    .select-box, .search-box, .num-box {
       background: rgba(0, 243, 255, 0.05);
       border: 1px solid rgba(0, 243, 255, 0.4);
       color: #fff;
-      padding: 6px 8px;
+      padding: 6px 6px;
       border-radius: 6px;
       font-family: monospace;
       outline: none;
       font-size: 0.75rem;
     }
     .select-box option { background: #050c19; color: #fff; }
-    .search-box { width: 110px; }
-    .select-box { width: 115px; }
+    .search-box { width: 95px; }
+    .num-box { width: 55px; text-align: center; }
+    .select-box { width: 105px; }
 
     .main-content {
       display: flex;
@@ -108,7 +109,7 @@
       align-items: center;
       z-index: 3;
       gap: 12px;
-      display: none; /* Oculto por defecto */
+      display: none;
     }
 
     .turtle-container {
@@ -145,7 +146,7 @@
       0% { transform: translate(0, 0) rotate(0deg); }
       20% { transform: translate(-2px, 2px) rotate(-1deg); }
       40% { transform: translate(-1px, -2px) rotate(1deg); }
-      60% { transform: translate(2px, 1px, 0) rotate(0deg); }
+      60% { transform: translate(2px, 1px) rotate(0deg); }
       80% { transform: translate(1px, -1px) rotate(-1deg); }
       100% { transform: translate(0, 0) rotate(0deg); }
     }
@@ -171,7 +172,7 @@
     }
 
     .channels-sidebar {
-      width: 320px;
+      width: 330px;
       background: rgba(5, 12, 25, 0.98);
       border-left: 1px solid rgba(0, 243, 255, 0.2);
       display: flex;
@@ -199,8 +200,9 @@
     .channel-card {
       display: flex;
       align-items: center;
-      gap: 12px;
-      padding: 12px 14px;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
       border-bottom: 1px solid rgba(255, 255, 255, 0.05);
       cursor: pointer;
       transition: background 0.2s ease;
@@ -211,32 +213,69 @@
       border-left: 3px solid #00f3ff;
     }
 
+    .channel-main-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      overflow: hidden;
+      flex: 1;
+    }
+
+    .channel-num {
+      font-family: monospace;
+      font-size: 0.7rem;
+      color: #00f3ff;
+      background: rgba(0, 243, 255, 0.1);
+      padding: 2px 4px;
+      border-radius: 4px;
+      min-width: 32px;
+      text-align: center;
+    }
+
     .channel-details {
       display: flex;
       flex-direction: column;
       gap: 2px;
       overflow: hidden;
+      flex: 1;
     }
     .channel-name {
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       font-weight: bold;
       color: #fff;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
     .channel-meta {
-      font-size: 0.7rem;
+      font-size: 0.65rem;
       color: #94a3b8;
       text-transform: uppercase;
     }
 
+    .fav-btn {
+      background: transparent;
+      border: none;
+      color: #555;
+      font-size: 1.1rem;
+      cursor: pointer;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+    .fav-btn.is-fav {
+      color: #ffd700;
+    }
+    .fav-btn:hover {
+      transform: scale(1.15);
+    }
+
     @media (max-width: 768px) {
-      header { padding: 0 8px; }
-      .brand-title { font-size: 0.8rem; }
+      header { padding: 0 6px; }
+      .brand-title { font-size: 0.75rem; }
       .main-content { flex-direction: column; }
       .video-section { height: 40vh; flex: none; }
       .channels-sidebar { width: 100%; flex: 1; border-left: none; border-top: 1px solid rgba(0, 243, 255, 0.2); }
-      .search-box { width: 95px; }
-      .select-box { width: 105px; }
+      .search-box { width: 75px; }
+      .num-box { width: 45px; }
+      .select-box { width: 90px; }
     }
   </style>
 </head>
@@ -248,8 +287,10 @@
         <span>📡</span> telebacus
       </div>
       <div class="header-controls">
+        <input type="number" id="num-input" class="num-box" placeholder="N°" min="1" autocomplete="off" title="Ir al canal N°">
         <select id="country-select" class="select-box">
           <option value="ALL">🌎 Todos</option>
+          <option value="FAV">★ Favoritos</option>
         </select>
         <input type="text" id="search-input" class="search-box" placeholder="Buscar..." autocomplete="off">
       </div>
@@ -257,7 +298,7 @@
 
     <div class="main-content">
       <div class="video-section">
-        <!-- Overlay de error con la Tortuga y estática -->
+        <!-- Pantalla de Error / Estática con la Tortuga -->
         <div class="error-overlay" id="error-screen">
           <div class="turtle-container">
             🐢
@@ -291,6 +332,7 @@
     var errorScreen = document.getElementById('error-screen');
     var hls = null;
     var listaCanalesGlobal = [];
+    var favoritos = JSON.parse(localStorage.getItem('telebacus_favs') || '[]');
 
     async function inicializarTelebacus() {
       try {
@@ -315,6 +357,7 @@
         listaCanalesGlobal = channelsData
           .filter(c => streamMap[c.id] && c.name)
           .map(c => ({
+            id: c.id,
             nombre: c.name,
             pais: c.country || 'INT',
             categoria: (c.categories && c.categories.length > 0) ? c.categories[0] : 'General',
@@ -347,47 +390,95 @@
       }
     }
 
+    function obtenerCanalesFiltrados() {
+      const query = document.getElementById('search-input').value.toLowerCase();
+      const paisSeleccionado = document.getElementById('country-select').value;
+
+      return listaCanalesGlobal.filter(c => {
+        const coincideTexto = c.nombre.toLowerCase().includes(query) || c.categoria.toLowerCase().includes(query);
+        let coincidePais = true;
+        if (paisSeleccionado === 'FAV') {
+          coincidePais = favoritos.includes(c.id);
+        } else if (paisSeleccionado !== 'ALL') {
+          coincidePais = (c.pais === paisSeleccionado);
+        }
+        return coincideTexto && coincidePais;
+      });
+    }
+
     function renderizarCanales(canales) {
       const container = document.getElementById('channels-container');
       document.getElementById('channel-count').textContent = canales.length;
       container.innerHTML = '';
 
       if (canales.length === 0) {
-        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales HTTPS.</div>';
+        container.innerHTML = '<div style="padding: 20px; color: #94a3b8; font-size: 0.85rem;">No se encontraron canales.</div>';
         return;
       }
 
       canales.slice(0, 200).forEach((canal, index) => {
         const card = document.createElement('div');
-        card.className = 'channel-card' + (index === 0 ? ' active' : '');
-        card.innerHTML = `
-          <div class="channel-details">
-            <span class="channel-name">${canal.nombre}</span>
-            <span class="channel-meta">[${canal.pais}] • ${canal.categoria}</span>
-          </div>
-        `;
+        const esFav = favoritos.includes(canal.id);
+        const numeroReal = listaCanalesGlobal.findIndex(c => c.id === canal.id) + 1;
 
-        card.onclick = function() {
-          document.querySelectorAll('.channel-card').forEach(el => el.classList.remove('active'));
-          card.classList.add('active');
-          reproducirCanal(canal);
-        };
+        card.className = 'channel-card';
+        card.innerHTML = `
+          <div class="channel-main-info" onclick="seleccionarYReproducir('${canal.id}')">
+            <span class="channel-num">#${numeroReal}</span>
+            <div class="channel-details">
+              <span class="channel-name">${canal.nombre}</span>
+              <span class="channel-meta">[${canal.pais}] • ${canal.categoria}</span>
+            </div>
+          </div>
+          <button class="fav-btn ${esFav ? 'is-fav' : ''}" onclick="toggleFavorito(event, '${canal.id}')" title="Favorito">★</button>
+        `;
 
         container.appendChild(card);
       });
     }
 
     function aplicarFiltros() {
-      const query = document.getElementById('search-input').value.toLowerCase();
-      const paisSeleccionado = document.getElementById('country-select').value;
-
-      const filtrados = listaCanalesGlobal.filter(c => {
-        const coincideTexto = c.nombre.toLowerCase().includes(query) || c.categoria.toLowerCase().includes(query);
-        const coincidePais = (paisSeleccionado === 'ALL' || c.pais === paisSeleccionado);
-        return coincideTexto && coincidePais;
-      });
-
+      const filtrados = obtenerCanalesFiltrados();
       renderizarCanales(filtrados);
+    }
+
+    function seleccionarYReproducir(idCanal) {
+      const canal = listaCanalesGlobal.find(c => c.id === idCanal);
+      if (canal) {
+        document.querySelectorAll('.channel-card').forEach(el => el.classList.remove('active'));
+        // Marcar activo en la UI si está visible
+        const cards = document.querySelectorAll('.channel-card');
+        cards.forEach(card => {
+          if (card.innerHTML.includes(canal.nombre)) {
+            card.classList.add('active');
+          }
+        });
+        reproducirCanal(canal);
+      }
+    }
+
+    function toggleFavorito(event, idCanal) {
+      event.stopPropagation();
+      const index = favoritos.indexOf(idCanal);
+      if (index > -1) {
+        favoritos.splice(index, 1);
+      } else {
+        favoritos.push(idCanal);
+      }
+      localStorage.setItem('telebacus_favs', JSON.stringify(favoritos));
+      aplicarFiltros();
+    }
+
+    function saltarPorNumero(num) {
+      const indice = parseInt(num) - 1;
+      if (!isNaN(indice) && indice >= 0 && indice < listaCanalesGlobal.length) {
+        const canal = listaCanalesGlobal[indice];
+        // Si estamos filtrando, nos aseguramos de que cumpla el filtro actual o limpiamos el filtro
+        document.getElementById('country-select').value = 'ALL';
+        document.getElementById('search-input').value = '';
+        aplicarFiltros();
+        seleccionarYReproducir(canal.id);
+      }
     }
 
     function mostrarErrorTortuga(mensaje) {
@@ -443,6 +534,14 @@
 
     document.getElementById('search-input').addEventListener('input', aplicarFiltros);
     document.getElementById('country-select').addEventListener('change', aplicarFiltros);
+    document.getElementById('num-input').addEventListener('change', function() {
+      saltarPorNumero(this.value);
+    });
+    document.getElementById('num-input').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        saltarPorNumero(this.value);
+      }
+    });
 
     window.onload = inicializarTelebacus;
   </script>
