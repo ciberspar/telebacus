@@ -5,6 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>telebacus // Global Live TV</title>
 
+  <!-- Iconos de la aplicación (Tortuga en la tele) -->
+  <link rel="apple-touch-icon" sizes="512x512" href="icon-512.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="icon-512.png">
+
+  <!-- Manifest para PWA -->
+  <link rel="manifest" href="data:application/manifest+json;charset=utf-8,%7B%22name%22%3A%22telebacus%22%2C%22short_name%22%3A%22telebacus%22%2C%22start_url%22%3A%22.%22%2C%22display%22%3A%22standalone%22%2C%22background_color%22%3A%22%23090d16%22%2C%22theme_color%22%3A%22%23050c19%22%2C%22icons%22%3A%5B%7B%22src%22%3A%22icon-512.png%22%2C%22sizes%22%3A%22512x512%22%2C%22type%22%3A%22image%252Fpng%22%7D%5D%7D">
+
   <!-- HLS.js para compatibilidad de streaming -->
   <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
 
@@ -360,7 +367,6 @@
             nombre: c.name,
             pais: c.country || 'INT',
             categoria: (c.categories && c.categories.length > 0) ? c.categories[0] : 'General',
-            // Si la API provee un número de canal (chno), lo usamos; sino, generamos uno secuencial basado en su índice
             chno: c.chno ? parseInt(c.chno) : (index + 1),
             url: streamMap[c.id]
           }));
