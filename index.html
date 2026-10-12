@@ -228,7 +228,7 @@
       background: rgba(0, 243, 255, 0.1);
       padding: 2px 4px;
       border-radius: 4px;
-      min-width: 32px;
+      min-width: 36px;
       text-align: center;
     }
 
@@ -287,7 +287,7 @@
         <span>📡</span> telebacus
       </div>
       <div class="header-controls">
-        <input type="number" id="num-input" class="num-box" placeholder="N°" min="1" autocomplete="off" title="Ir al canal N°">
+        <input type="number" id="num-input" class="num-box" placeholder="N°" min="1" autocomplete="off" title="Número de canal (dial)">
         <select id="country-select" class="select-box">
           <option value="ALL">🌎 Todos</option>
           <option value="FAV">★ Favoritos</option>
@@ -347,7 +347,6 @@
         const streamsData = await streamsRes.json();
 
         const streamMap = {};
-        
         streamsData.forEach(s => {
           if (s.url && s.url.startsWith('https://') && s.url.includes('.m3u8') && !streamMap[s.channel]) {
             streamMap[s.channel] = s.url;
@@ -356,15 +355,17 @@
 
         listaCanalesGlobal = channelsData
           .filter(c => streamMap[c.id] && c.name)
-          .map(c => ({
+          .map((c, index) => ({
             id: c.id,
             nombre: c.name,
             pais: c.country || 'INT',
             categoria: (c.categories && c.categories.length > 0) ? c.categories[0] : 'General',
+            // Si la API provee un número de canal (chno), lo usamos; sino, generamos uno secuencial basado en su índice
+            chno: c.chno ? parseInt(c.chno) : (index + 1),
             url: streamMap[c.id]
           }));
 
-        listaCanalesGlobal.sort((a, b) => a.nombre.localeCompare(b.nombre));
+        listaCanalesGlobal.sort((a, b) => a.chno - b.chno);
 
         const select = document.getElementById('country-select');
         const paisesUnicos = Array.from(new Set(listaCanalesGlobal.map(c => c.pais))).sort();
@@ -395,7 +396,7 @@
       const paisSeleccionado = document.getElementById('country-select').value;
 
       return listaCanalesGlobal.filter(c => {
-        const coincideTexto = c.nombre.toLowerCase().includes(query) || c.categoria.toLowerCase().includes(query);
+        const coincideTexto = c.nombre.toLowerCase().includes(query) || c.categoria.toLowerCase().includes(query) || c.chno.toString().includes(query);
         let coincidePais = true;
         if (paisSeleccionado === 'FAV') {
           coincidePais = favoritos.includes(c.id);
@@ -416,15 +417,14 @@
         return;
       }
 
-      canales.slice(0, 200).forEach((canal, index) => {
+      canales.slice(0, 200).forEach((canal) => {
         const card = document.createElement('div');
         const esFav = favoritos.includes(canal.id);
-        const numeroReal = listaCanalesGlobal.findIndex(c => c.id === canal.id) + 1;
 
         card.className = 'channel-card';
         card.innerHTML = `
           <div class="channel-main-info" onclick="seleccionarYReproducir('${canal.id}')">
-            <span class="channel-num">#${numeroReal}</span>
+            <span class="channel-num">#${canal.chno}</span>
             <div class="channel-details">
               <span class="channel-name">${canal.nombre}</span>
               <span class="channel-meta">[${canal.pais}] • ${canal.categoria}</span>
@@ -446,7 +446,6 @@
       const canal = listaCanalesGlobal.find(c => c.id === idCanal);
       if (canal) {
         document.querySelectorAll('.channel-card').forEach(el => el.classList.remove('active'));
-        // Marcar activo en la UI si está visible
         const cards = document.querySelectorAll('.channel-card');
         cards.forEach(card => {
           if (card.innerHTML.includes(canal.nombre)) {
@@ -469,15 +468,17 @@
       aplicarFiltros();
     }
 
-    function saltarPorNumero(num) {
-      const indice = parseInt(num) - 1;
-      if (!isNaN(indice) && indice >= 0 && indice < listaCanalesGlobal.length) {
-        const canal = listaCanalesGlobal[indice];
-        // Si estamos filtrando, nos aseguramos de que cumpla el filtro actual o limpiamos el filtro
+    function sintonizarPorDial(numeroDial) {
+      const numeroBuscado = parseInt(numeroDial);
+      const canalEncontrado = listaCanalesGlobal.find(c => c.chno === numeroBuscado);
+      
+      if (canalEncontrado) {
         document.getElementById('country-select').value = 'ALL';
         document.getElementById('search-input').value = '';
         aplicarFiltros();
-        seleccionarYReproducir(canal.id);
+        seleccionarYReproducir(canalEncontrado.id);
+      } else {
+        alert('No se encontró ningún canal con el número de dial #' + numeroDial);
       }
     }
 
@@ -492,7 +493,7 @@
 
     function reproducirCanal(canal) {
       document.getElementById('current-info').style.display = 'flex';
-      document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + '] (Cargando...)';
+      document.getElementById('current-title').textContent = '[' + canal.chno + '] ' + canal.nombre + ' [' + canal.pais + '] (Cargando...)';
       ocultarErrorTortuga();
 
       if (hls) {
@@ -506,7 +507,7 @@
         video.src = streamUrl;
         video.load();
         video.play().then(() => {
-          document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
+          document.getElementById('current-title').textContent = '[' + canal.chno + '] ' + canal.nombre + ' [' + canal.pais + ']';
         }).catch(() => {
           mostrarErrorTortuga(canal.nombre + ' (Señal bloqueada)');
         });
@@ -518,7 +519,7 @@
         
         hls.on(Hls.Events.MANIFEST_PARSED, function() {
           video.play().then(() => {
-            document.getElementById('current-title').textContent = canal.nombre + ' [' + canal.pais + ']';
+            document.getElementById('current-title').textContent = '[' + canal.chno + '] ' + canal.nombre + ' [' + canal.pais + ']';
           }).catch(() => {
             mostrarErrorTortuga(canal.nombre + ' (Clic para reproducir)');
           });
@@ -535,11 +536,11 @@
     document.getElementById('search-input').addEventListener('input', aplicarFiltros);
     document.getElementById('country-select').addEventListener('change', aplicarFiltros);
     document.getElementById('num-input').addEventListener('change', function() {
-      saltarPorNumero(this.value);
+      sintonizarPorDial(this.value);
     });
     document.getElementById('num-input').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
-        saltarPorNumero(this.value);
+        sintonizarPorDial(this.value);
       }
     });
 
