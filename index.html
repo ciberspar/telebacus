@@ -64,20 +64,26 @@
       align-items: center;
     }
 
-    .select-box, .search-box, .num-box {
+    .select-box, .search-box, .num-box, .report-btn {
       background: rgba(0, 243, 255, 0.05);
       border: 1px solid rgba(0, 243, 255, 0.4);
       color: #fff;
-      padding: 6px 6px;
+      padding: 6px 8px;
       border-radius: 6px;
       font-family: monospace;
       outline: none;
       font-size: 0.75rem;
+      cursor: pointer;
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
     }
+    .report-btn:hover { background: rgba(0, 243, 255, 0.2); color: #00f3ff; }
     .select-box option { background: #050c19; color: #fff; }
-    .search-box { width: 95px; }
-    .num-box { width: 55px; text-align: center; }
-    .select-box { width: 105px; }
+    .search-box { width: 85px; }
+    .num-box { width: 50px; text-align: center; }
+    .select-box { width: 90px; }
 
     .main-content {
       display: flex;
@@ -276,13 +282,13 @@
 
     @media (max-width: 768px) {
       header { padding: 0 6px; }
-      .brand-title { font-size: 0.75rem; }
+      .brand-title { font-size: 0.7rem; }
       .main-content { flex-direction: column; }
       .video-section { height: 40vh; flex: none; }
       .channels-sidebar { width: 100%; flex: 1; border-left: none; border-top: 1px solid rgba(0, 243, 255, 0.2); }
-      .search-box { width: 75px; }
-      .num-box { width: 45px; }
-      .select-box { width: 90px; }
+      .search-box { width: 65px; }
+      .num-box { width: 40px; }
+      .select-box { width: 75px; }
     }
   </style>
 </head>
@@ -294,12 +300,13 @@
         <span>📡</span> telebacus
       </div>
       <div class="header-controls">
-        <input type="number" id="num-input" class="num-box" placeholder="N°" min="1" autocomplete="off" title="Número de canal (dial)">
+        <input type="number" id="num-input" class="num-box" placeholder="N°" min="1" autocomplete="off" title="Número de canal">
         <select id="country-select" class="select-box">
           <option value="ALL">🌎 Todos</option>
-          <option value="FAV">★ Favoritos</option>
+          <option value="FAV">★ Fav</option>
         </select>
         <input type="text" id="search-input" class="search-box" placeholder="Buscar..." autocomplete="off">
+        <a href="https://github.com/ciberspar/telebacus/issues" target="_blank" rel="noopener noreferrer" class="report-btn" title="Reportar un problema">💬 Reportar</a>
       </div>
     </header>
 
