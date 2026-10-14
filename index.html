@@ -153,6 +153,8 @@
       color: #ff4a4a;
       letter-spacing: 1px;
       text-transform: uppercase;
+      text-align: center;
+      padding: 0 10px;
     }
 
     @keyframes temblor {
@@ -318,7 +320,7 @@
             🐢
             <div class="error-badge">❌</div>
           </div>
-          <div class="error-text">Señal caída o fuera de línea</div>
+          <div class="error-text" id="error-msg-text">Señal caída o fuera de línea</div>
         </div>
 
         <div class="channel-info-overlay" id="current-info" style="display: none;">
@@ -347,6 +349,7 @@
     var hls = null;
     var listaCanalesGlobal = [];
     var favoritos = JSON.parse(localStorage.getItem('telebacus_favs') || '[]');
+    var currentRetryTimeout = null;
 
     async function inicializarTelebacus() {
       try {
@@ -497,7 +500,7 @@
 
     function mostrarErrorTortuga(mensaje) {
       errorScreen.style.display = 'flex';
-      document.getElementById('current-title').textContent = mensaje;
+      document.getElementById('error-msg-text').textContent = mensaje;
     }
 
     function ocultarErrorTortuga() {
@@ -505,6 +508,7 @@
     }
 
     function reproducirCanal(canal) {
+      if (currentRetryTimeout) clearTimeout(currentRetryTimeout);
       document.getElementById('current-info').style.display = 'flex';
       document.getElementById('current-title').textContent = '[' + canal.chno + '] ' + canal.nombre + ' [' + canal.pais + '] (Cargando...)';
       ocultarErrorTortuga();
@@ -522,11 +526,17 @@
         video.play().then(() => {
           document.getElementById('current-title').textContent = '[' + canal.chno + '] ' + canal.nombre + ' [' + canal.pais + ']';
         }).catch(() => {
-          mostrarErrorTortuga(canal.nombre + ' (Señal bloqueada)');
+          mostrarErrorTortuga('Señal caída o fuera de línea');
         });
       } 
       else if (Hls.isSupported()) {
-        hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+        hls = new Hls({ 
+          enableWorker: true, 
+          lowLatencyMode: true,
+          fragLoadingTimeOut: 10000,
+          manifestLoadingTimeOut: 10000
+        });
+        
         hls.loadSource(streamUrl);
         hls.attachMedia(video);
         
@@ -534,15 +544,34 @@
           video.play().then(() => {
             document.getElementById('current-title').textContent = '[' + canal.chno + '] ' + canal.nombre + ' [' + canal.pais + ']';
           }).catch(() => {
-            mostrarErrorTortuga(canal.nombre + ' (Clic para reproducir)');
+            mostrarErrorTortuga('Haz clic para reproducir o canal inactivo');
           });
         });
 
         hls.on(Hls.Events.ERROR, function (event, data) {
           if (data.fatal) {
-            mostrarErrorTortuga(canal.nombre + ' (Fuera de línea)');
+            switch (data.type) {
+              case Hls.ErrorTypes.NETWORK_ERROR:
+                // Intentar recuperar el error de red automáticamente una vez
+                console.log("Error de red, intentando recuperar...");
+                hls.startLoad();
+                break;
+              case Hls.ErrorTypes.MEDIA_ERROR:
+                console.log("Error de media, intentando recuperar...");
+                hls.recoverMediaError();
+                break;
+              default:
+                mostrarErrorTortuga('Señal caída o fuera de línea');
+                if (hls) {
+                  hls.destroy();
+                  hls = null;
+                }
+                break;
+            }
           }
         });
+      } else {
+        mostrarErrorTortuga('Navegador incompatible con streaming HLS');
       }
     }
 
