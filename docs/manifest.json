@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "TeleBacus Cyber Edition",
+  "name": "TeleBacus Global Cyber TV",
   "short_name": "TeleBacus",
-  "description": "Televisión en directo con estilo cyber.",
+  "description": "Televisión internacional con verificación inteligente de transmisiones.",
   "lang": "es",
   "start_url": "./",
   "scope": "./",
