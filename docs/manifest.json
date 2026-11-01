@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "TeleBacus Cyber Edition",
+  "short_name": "TeleBacus",
+  "description": "Televisión en directo con estilo cyber.",
+  "lang": "es",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#080d12",
+  "theme_color": "#080d12",
+  "icons": [
+    {
+      "src": "./icon-512.jpg",
+      "sizes": "512x512",
+      "type": "image/jpeg",
+      "purpose": "any"
+    }
+  ]
+}
