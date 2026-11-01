@@ -4,113 +4,302 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#080d12">
-  <meta name="description" content="TeleBacus: televisión en directo con una interfaz cyber.">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="TeleBacus">
+  <meta name="description" content="TeleBacus Global: televisión internacional con verificación inteligente de transmisiones.">
+  <title>TeleBacus Global</title>
   <link rel="manifest" href="./manifest.json">
-  <link rel="apple-touch-icon" href="./icon-512.jpg">
-  <title>TeleBacus — Cyber Edition</title>
+  <link rel="icon" href="./icon-512.jpg" type="image/jpeg">
+
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
 
   <style>
     :root {
       color-scheme: dark;
       --bg: #080d12;
       --panel: #101a22;
-      --panel2: #14232d;
-      --cyan: #00e5ff;
-      --green: #00ff9c;
-      --muted: #8ba3ad;
-      --border: rgba(0,229,255,.2);
+      --panel2: #14232c;
+      --border: #243943;
+      --green: #00f5a0;
+      --cyan: #00d9ff;
       --red: #ff5268;
+      --muted: #8298a3;
+      --text: #edf8fa;
     }
 
-    * { box-sizing: border-box; }
+    * {
+      box-sizing: border-box;
+    }
 
     body {
       margin: 0;
-      min-height: 100vh;
       background:
-        radial-gradient(ellipse at top, rgba(0,229,255,.09), transparent 42%),
+        radial-gradient(ellipse at 50% -20%, #123c3c 0, transparent 48%),
         var(--bg);
-      color: #eafaff;
-      font-family: Arial, Helvetica, sans-serif;
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      min-height: 100vh;
     }
 
-    button, input, select { font: inherit; }
+    button, input, select {
+      font: inherit;
+    }
 
-    header {
-      min-height: 70px;
-      padding: 14px 22px;
+    button {
+      cursor: pointer;
+    }
+
+    .topbar {
+      height: 68px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 15px;
+      padding: 0 22px;
       border-bottom: 1px solid var(--border);
-      background: rgba(8,13,18,.92);
+      background: #080d12eF;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      backdrop-filter: blur(15px);
     }
 
     .brand {
       display: flex;
       align-items: center;
       gap: 11px;
-      font-size: 21px;
       font-weight: 900;
       letter-spacing: 1.5px;
+      font-size: 19px;
     }
 
-    .brand-icon {
+    .brand-mark {
+      width: 37px;
+      height: 37px;
+      display: grid;
+      place-items: center;
+      border: 1px solid var(--green);
       color: var(--green);
-      font-size: 29px;
-      filter: drop-shadow(0 0 8px var(--green));
+      border-radius: 11px;
+      box-shadow: 0 0 18px #00f5a033;
     }
 
-    .brand span:last-child { color: var(--cyan); }
-
-    .online {
+    .brand span:last-child {
       color: var(--green);
-      font-size: 12px;
+    }
+
+    .top-status {
+      color: var(--green);
+      font-size: 11px;
       letter-spacing: 1px;
-    }
-
-    main {
-      width: min(1450px, 100%);
-      margin: auto;
-      padding: 22px;
-    }
-
-    .section-title {
-      margin: 0 0 15px;
-      color: var(--cyan);
-      font-size: 13px;
-      letter-spacing: 2px;
-      text-transform: uppercase;
+      font-weight: 800;
     }
 
     .layout {
       display: grid;
-      grid-template-columns: minmax(0, 1.7fr) minmax(280px, .8fr);
-      gap: 18px;
-      align-items: start;
+      grid-template-columns: 320px minmax(0, 1fr);
+      gap: 20px;
+      max-width: 1500px;
+      margin: auto;
+      padding: 22px;
+    }
+
+    .sidebar, .main {
+      min-width: 0;
     }
 
     .panel {
-      background: linear-gradient(145deg, rgba(20,35,45,.96), rgba(12,20,27,.96));
+      background: linear-gradient(145deg, #12202a, #0d151c);
       border: 1px solid var(--border);
-      border-radius: 13px;
-      box-shadow: 0 0 22px rgba(0,229,255,.045);
+      border-radius: 17px;
       overflow: hidden;
     }
 
-    .player-panel { padding: 14px; }
+    .sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
 
-    .player {
-      position: relative;
+    .side-heading {
+      padding: 17px;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      color: var(--green);
+    }
+
+    .filters {
+      padding: 13px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .field {
       width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #020609;
-      border: 1px solid rgba(0,229,255,.25);
+      background: #081117;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px;
+      outline: none;
+    }
+
+    .field:focus {
+      border-color: var(--green);
+      box-shadow: 0 0 0 2px #00f5a01a;
+    }
+
+    .filter-buttons {
+      display: flex;
+      gap: 8px;
+    }
+
+    .filter-button {
+      flex: 1;
+      padding: 10px 7px;
+      background: #14232c;
+      border: 1px solid var(--border);
+      color: var(--muted);
       border-radius: 9px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .filter-button.active {
+      color: var(--green);
+      border-color: var(--green);
+      background: #00f5a012;
+    }
+
+    .channel-heading {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 16px;
+      border-bottom: 1px solid var(--border);
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1px;
+    }
+
+    .channel-list {
+      max-height: 570px;
+      overflow-y: auto;
+    }
+
+    .channel {
+      display: flex;
+      gap: 11px;
+      align-items: center;
+      width: 100%;
+      text-align: left;
+      padding: 12px 13px;
+      border: 0;
+      border-bottom: 1px solid #20313a;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .channel:hover, .channel.selected {
+      background: #00f5a010;
+    }
+
+    .channel.selected {
+      box-shadow: inset 3px 0 var(--green);
+    }
+
+    .channel-number {
+      width: 30px;
+      height: 30px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      background: #1a3039;
+      color: var(--cyan);
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .channel-info {
+      min-width: 0;
+      flex: 1;
+    }
+
+    .channel-name {
+      display: block;
+      font-size: 13px;
+      font-weight: 750;
       overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .channel-country {
+      display: block;
+      color: var(--muted);
+      font-size: 10px;
+      margin-top: 4px;
+    }
+
+    .channel-state {
+      font-size: 9px;
+      font-weight: 900;
+      white-space: nowrap;
+    }
+
+    .online { color: var(--green); }
+    .offline { color: var(--red); }
+    .unknown { color: #e6bd67; }
+
+    .main {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+
+    .welcome {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .welcome h1 {
+      margin: 0;
+      font-size: clamp(21px, 3vw, 30px);
+      letter-spacing: -.7px;
+    }
+
+    .welcome p {
+      color: var(--muted);
+      font-size: 12px;
+      margin: 7px 0 0;
+    }
+
+    .global-label {
+      border: 1px solid #00d9ff55;
+      color: var(--cyan);
+      border-radius: 8px;
+      padding: 9px 12px;
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    .player-panel {
+      padding: 12px;
+    }
+
+    .player-frame {
+      background:
+        radial-gradient(ellipse at center, #15313a, #05090d 70%);
+      border: 1px solid #29444d;
+      border-radius: 13px;
+      overflow: hidden;
+      aspect-ratio: 16 / 9;
+      position: relative;
       display: grid;
       place-items: center;
     }
@@ -118,763 +307,938 @@
     video {
       width: 100%;
       height: 100%;
-      display: block;
-      background: #000;
       object-fit: contain;
+      background: #000;
     }
 
-    .placeholder {
+    .player-placeholder {
       position: absolute;
       inset: 0;
       display: flex;
-      flex-direction: column;
-      justify-content: center;
       align-items: center;
+      justify-content: center;
+      flex-direction: column;
       text-align: center;
       padding: 20px;
-      background:
-        radial-gradient(circle, rgba(0,229,255,.09), transparent 60%),
-        #050b10;
+      pointer-events: none;
     }
 
-    .placeholder.hidden { display: none; }
-
-    .placeholder .big-icon {
-      font-size: 48px;
+    .placeholder-icon {
+      font-size: 42px;
+      color: var(--green);
       margin-bottom: 12px;
-      filter: drop-shadow(0 0 12px rgba(0,229,255,.5));
     }
 
-    .placeholder h2 {
-      color: var(--cyan);
-      font-size: 18px;
-      margin: 0 0 8px;
+    .player-placeholder strong {
+      font-size: 16px;
     }
 
-    .placeholder p {
-      max-width: 390px;
-      margin: 0 0 15px;
+    .player-placeholder small {
       color: var(--muted);
-      font-size: 13px;
-      line-height: 1.5;
+      margin-top: 7px;
     }
 
-    .error-box {
-      display: flex;
+    .error-panel {
+      position: absolute;
+      inset: 0;
+      background: #090f14f5;
+      display: none;
       align-items: center;
       justify-content: center;
-      gap: 13px;
-      max-width: 440px;
-      text-align: left;
+      gap: 18px;
+      padding: 20px;
+      z-index: 2;
     }
 
-    .error-box .baco { font-size: 54px; }
+    .error-panel.visible {
+      display: flex;
+    }
 
-    .error-symbol {
-      display: inline-grid;
-      place-items: center;
-      width: 25px;
-      height: 25px;
-      margin-right: 5px;
-      border-radius: 50%;
-      background: var(--red);
-      color: #170308;
+    .error-baco {
+      width: 86px;
+      height: 86px;
+      object-fit: contain;
+      flex-shrink: 0;
+    }
+
+    .error-content {
+      max-width: 330px;
+    }
+
+    .error-content strong {
+      display: block;
+      color: var(--red);
+      font-size: 15px;
+      margin-bottom: 7px;
+    }
+
+    .error-content p {
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.5;
+      margin: 0 0 12px;
+    }
+
+    .retry-button, .control-button {
+      border: 1px solid var(--green);
+      background: #00f5a014;
+      color: var(--green);
+      border-radius: 9px;
+      padding: 10px 14px;
+      font-size: 11px;
       font-weight: 900;
     }
 
-    .error-title { color: var(--red) !important; }
+    .retry-button:hover, .control-button:hover {
+      background: #00f5a02a;
+    }
 
     .player-info {
+      padding: 15px 3px 3px;
       display: flex;
       justify-content: space-between;
-      align-items: center;
       gap: 12px;
-      padding: 14px 2px 2px;
+      align-items: center;
     }
 
-    .player-info strong {
-      display: block;
-      font-size: 15px;
+    .current-title {
+      font-size: 17px;
+      font-weight: 900;
     }
 
-    .player-info small {
-      display: block;
+    .status-message {
+      color: var(--muted);
+      font-size: 11px;
       margin-top: 5px;
-      color: var(--muted);
     }
 
-    .controls {
+    .player-controls {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
     }
 
-    .btn {
-      border: 1px solid rgba(0,229,255,.35);
-      background: rgba(0,229,255,.08);
-      color: var(--cyan);
-      border-radius: 7px;
-      padding: 10px 13px;
-      cursor: pointer;
-      transition: .2s;
+    .control-button.secondary {
+      border-color: var(--border);
+      color: var(--text);
+      background: #14232c;
     }
 
-    .btn:hover {
-      background: rgba(0,229,255,.18);
-      box-shadow: 0 0 12px rgba(0,229,255,.15);
-    }
-
-    .btn.primary {
-      border-color: var(--green);
-      color: var(--green);
-      background: rgba(0,255,156,.08);
-    }
-
-    .btn:disabled { opacity: .45; cursor: not-allowed; }
-
-    .catalog { padding: 15px; }
-
-    .search-row {
+    .stats {
       display: grid;
-      grid-template-columns: 1fr 130px;
-      gap: 8px;
-      margin-bottom: 10px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
     }
 
-    input, select {
-      width: 100%;
-      min-width: 0;
-      padding: 11px;
-      color: #eafaff;
-      background: #081219;
+    .stat {
+      padding: 16px;
+      background: #101a22;
       border: 1px solid var(--border);
-      border-radius: 7px;
-      outline: none;
+      border-radius: 13px;
     }
 
-    input:focus, select:focus {
-      border-color: var(--cyan);
-      box-shadow: 0 0 0 2px rgba(0,229,255,.08);
-    }
-
-    .filter-row {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-
-    .filter-row .btn.active {
-      color: var(--green);
-      border-color: var(--green);
-      background: rgba(0,255,156,.12);
-    }
-
-    .catalog-heading {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin: 12px 0;
+    .stat-label {
       color: var(--muted);
-      font-size: 12px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      font-weight: 800;
     }
 
-    #channels-container {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      max-height: 560px;
-      overflow-y: auto;
-      padding-right: 3px;
-    }
-
-    .channel {
-      width: 100%;
-      display: flex;
-      align-items: center;
-      gap: 11px;
-      padding: 11px;
-      text-align: left;
-      color: #eafaff;
-      background: rgba(3,11,16,.65);
-      border: 1px solid rgba(0,229,255,.12);
-      border-radius: 8px;
-      cursor: pointer;
-    }
-
-    .channel:hover, .channel.selected {
-      border-color: var(--cyan);
-      background: rgba(0,229,255,.08);
-    }
-
-    .channel-number {
-      min-width: 29px;
+    .stat-value {
+      display: block;
+      font-size: 22px;
       color: var(--green);
-      font-size: 12px;
-      text-align: center;
+      font-weight: 900;
+      margin-top: 7px;
     }
 
-    .channel-name {
+    .dial-panel {
+      padding: 16px;
+    }
+
+    .dial-panel h3 {
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--cyan);
+      margin: 0 0 12px;
+    }
+
+    .dial-row {
+      display: flex;
+      gap: 9px;
+    }
+
+    .dial-row input {
       flex: 1;
       min-width: 0;
-      font-size: 13px;
-      font-weight: 700;
-      overflow-wrap: anywhere;
     }
 
-    .channel-country {
-      color: var(--muted);
-      font-size: 11px;
-    }
-
-    .favorite {
-      border: 0;
-      padding: 5px;
-      color: #71848c;
-      background: transparent;
-      cursor: pointer;
-      font-size: 17px;
-    }
-
-    .favorite.on { color: #ffd45c; }
-
-    .message {
-      padding: 18px 10px;
-      color: var(--muted);
+    .footer {
+      max-width: 1500px;
+      margin: 0 auto;
+      padding: 0 22px 25px;
+      color: #60747e;
+      font-size: 10px;
       text-align: center;
-      font-size: 13px;
     }
 
-    .dial {
-      display: flex;
-      gap: 8px;
-      margin-top: 14px;
-      padding-top: 13px;
-      border-top: 1px solid var(--border);
-    }
-
-    .dial input { flex: 1; }
-
-    footer {
+    .empty {
       padding: 25px 15px;
+      color: var(--muted);
       text-align: center;
-      color: #617781;
-      font-size: 11px;
-      letter-spacing: 1px;
+      font-size: 12px;
     }
 
     @media (max-width: 850px) {
-      main { padding: 14px; }
-      .layout { grid-template-columns: 1fr; }
-      #channels-container { max-height: 430px; }
+      .layout {
+        grid-template-columns: 1fr;
+        padding: 13px;
+        gap: 14px;
+      }
+
+      .sidebar {
+        order: 2;
+      }
+
+      .main {
+        order: 1;
+      }
+
+      .channel-list {
+        max-height: 350px;
+      }
+
+      .topbar {
+        padding: 0 14px;
+      }
+
+      .stats {
+        gap: 7px;
+      }
+
+      .stat {
+        padding: 12px;
+      }
+
+      .stat-value {
+        font-size: 18px;
+      }
     }
 
     @media (max-width: 480px) {
-      header { padding: 13px 15px; }
-      .brand { font-size: 18px; }
-      .online { font-size: 10px; }
-      .search-row { grid-template-columns: 1fr; }
-      .player-info { align-items: flex-start; flex-direction: column; }
-      .controls { width: 100%; }
-      .controls .btn { flex: 1; }
+      .top-status {
+        font-size: 9px;
+      }
+
+      .welcome {
+        align-items: flex-start;
+      }
+
+      .global-label {
+        font-size: 8px;
+        padding: 7px;
+      }
+
+      .player-info {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .error-panel {
+        gap: 10px;
+        padding: 12px;
+      }
+
+      .error-baco {
+        width: 62px;
+        height: 62px;
+      }
+
+      .error-content strong {
+        font-size: 12px;
+      }
+
+      .error-content p {
+        font-size: 10px;
+      }
     }
   </style>
 </head>
 
 <body>
-  <header>
+  <header class="topbar">
     <div class="brand">
-      <span class="brand-icon">🐢</span>
-      <span>TELE<span>BACUS</span></span>
+      <div class="brand-mark">TB</div>
+      TELE<span>BACUS</span>
     </div>
-    <div class="online">● CYBER SYSTEM ONLINE</div>
+    <div class="top-status">● GLOBAL NETWORK</div>
   </header>
 
-  <main>
-    <div class="layout">
-      <section>
-        <h2 class="section-title">▸ Reproductor principal</h2>
+  <div class="layout">
+    <aside class="sidebar">
+      <section class="panel">
+        <div class="side-heading">◈ EXPLORAR CANALES</div>
 
-        <div class="panel player-panel">
-          <div class="player" id="player-frame">
-            <video id="video-player" playsinline controls preload="none"></video>
+        <div class="filters">
+          <input
+            id="search-input"
+            class="field"
+            type="search"
+            placeholder="Buscar canal..."
+            autocomplete="off"
+          >
 
-            <div class="placeholder" id="player-placeholder">
-              <div class="big-icon">📡</div>
-              <h2>TELEBACUS READY</h2>
-              <p>Seleccioná un canal del catálogo para comenzar a reproducir.</p>
+          <select id="country-select" class="field">
+            <option value="">Todos los países</option>
+          </select>
+
+          <div class="filter-buttons">
+            <button id="all-filter" class="filter-button active">
+              TODOS
+            </button>
+            <button id="favorites-filter" class="filter-button">
+              ★ FAVORITOS
+            </button>
+          </div>
+        </div>
+
+        <div class="channel-heading">
+          <span>LISTA DE CANALES</span>
+          <span id="channel-count">0</span>
+        </div>
+
+        <div id="channels-container" class="channel-list">
+          <div class="empty">Cargando catálogo mundial...</div>
+        </div>
+      </section>
+    </aside>
+
+    <main class="main">
+      <div class="welcome">
+        <div>
+          <h1>Televisión sin fronteras.</h1>
+          <p>Tu centro mundial de televisión en directo.</p>
+        </div>
+        <div class="global-label">GLOBAL TV</div>
+      </div>
+
+      <section class="panel player-panel">
+        <div id="player-frame" class="player-frame">
+
+          <video
+            id="video-player"
+            controls
+            playsinline
+            preload="none"
+          ></video>
+
+          <div id="player-placeholder" class="player-placeholder">
+            <div class="placeholder-icon">◉</div>
+            <strong>TELEBACUS PLAYER</strong>
+            <small>Selecciona un canal para comenzar.</small>
+          </div>
+
+          <div id="error-panel" class="error-panel">
+            <img
+              class="error-baco"
+              src="./icon-512.jpg"
+              alt="Baco"
+            >
+            <div class="error-content">
+              <strong>⚠ TRANSMISIÓN NO DISPONIBLE</strong>
+              <p id="error-message">
+                No se pudo reproducir este canal.
+              </p>
+              <button id="retry-button" class="retry-button">
+                ↻ REINTENTAR
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="player-info">
+          <div>
+            <div id="current-title" class="current-title">
+              Ningún canal seleccionado
+            </div>
+            <div id="status-message" class="status-message">
+              Sistema listo.
             </div>
           </div>
 
-          <div class="player-info">
-            <div>
-              <strong id="current-title">Ningún canal seleccionado</strong>
-              <small id="status-message">Sistema preparado</small>
-            </div>
-            <div class="controls">
-              <button class="btn" id="play-button" type="button">▶ Reproducir</button>
-              <button class="btn" id="fullscreen-button" type="button">⛶ Pantalla completa</button>
-            </div>
+          <div class="player-controls">
+            <button id="play-button" class="control-button">
+              ▶ REPRODUCIR
+            </button>
+            <button id="fullscreen-button" class="control-button secondary">
+              ⛶ PANTALLA
+            </button>
           </div>
         </div>
       </section>
 
-      <aside>
-        <h2 class="section-title">▸ Catálogo de canales</h2>
-        <div class="panel catalog">
-          <div class="search-row">
-            <input id="search-input" type="search" placeholder="Buscar canal..." aria-label="Buscar canal">
-            <select id="country-select" aria-label="Filtrar por país">
-              <option value="">Todos los países</option>
-            </select>
-          </div>
-
-          <div class="filter-row">
-            <button class="btn active" id="all-filter" type="button">Todos</button>
-            <button class="btn" id="favorites-filter" type="button">★ Favoritos</button>
-          </div>
-
-          <div class="catalog-heading">
-            <span>CANALES DISPONIBLES</span>
-            <span id="channel-count">0</span>
-          </div>
-
-          <div id="channels-container" aria-live="polite">
-            <div class="message">Conectando con el catálogo...</div>
-          </div>
-
-          <div class="dial">
-            <input id="num-input" type="number" min="1" placeholder="Número de canal" aria-label="Número de canal">
-            <button class="btn primary" id="dial-button" type="button">IR</button>
-          </div>
+      <section class="stats">
+        <div class="stat">
+          <span class="stat-label">CANALES</span>
+          <strong id="total-stat" class="stat-value">0</strong>
         </div>
-      </aside>
-    </div>
-  </main>
+        <div class="stat">
+          <span class="stat-label">ONLINE</span>
+          <strong id="online-stat" class="stat-value">0</strong>
+        </div>
+        <div class="stat">
+          <span class="stat-label">PAÍSES</span>
+          <strong id="countries-stat" class="stat-value">0</strong>
+        </div>
+      </section>
 
-  <footer>TELEBACUS CYBER EDITION · BACUS SYSTEMS</footer>
+      <section class="panel dial-panel">
+        <h3>⌗ ACCESO DIRECTO A CANALES</h3>
+        <div class="dial-row">
+          <input
+            id="num-input"
+            class="field"
+            type="number"
+            min="1"
+            placeholder="Número de canal..."
+          >
+          <button id="dial-button" class="control-button">
+            IR
+          </button>
+        </div>
+      </section>
+    </main>
+  </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.17/dist/hls.min.js"></script>
+  <footer class="footer">
+    TELEBACUS GLOBAL · CATÁLOGO INTERNACIONAL · Las transmisiones dependen de sus respectivos proveedores.
+  </footer>
+
   <script>
     "use strict";
 
-    const API_CHANNELS = "https://iptv-org.github.io/api/channels.json";
-    const API_STREAMS = "https://iptv-org.github.io/api/streams.json";
+    const API_CHANNELS =
+      "https://iptv-org.github.io/api/channels.json";
 
-    const video = document.getElementById("video-player");
-    const placeholder = document.getElementById("player-placeholder");
-    const channelsContainer = document.getElementById("channels-container");
-    const searchInput = document.getElementById("search-input");
-    const countrySelect = document.getElementById("country-select");
-    const channelCount = document.getElementById("channel-count");
-    const currentTitle = document.getElementById("current-title");
-    const statusMessage = document.getElementById("status-message");
+    const API_STREAMS =
+      "https://iptv-org.github.io/api/streams.json";
+
+    const HEALTH_URL = "./health.json";
+
+    const $ = id => document.getElementById(id);
+
+    const video = $("video-player");
 
     let channels = [];
     let streams = [];
+    let health = {};
     let visibleChannels = [];
-    let selectedChannel = null;
-    let hls = null;
-    let favoritesOnly = false;
-    let retryUrl = "";
+    let currentChannel = null;
+    let currentSources = [];
+    let currentAttempt = 0;
+    let currentHls = null;
+    let favorites = new Set();
 
-    let favorites = [];
+    let favoriteMode = false;
+
     try {
-      favorites = JSON.parse(localStorage.getItem("telebacus_favs") || "[]");
-      if (!Array.isArray(favorites)) favorites = [];
+      favorites = new Set(
+        JSON.parse(localStorage.getItem("telebacus-favorites") || "[]")
+      );
     } catch {
-      favorites = [];
+      favorites = new Set();
     }
 
-    function setStatus(message) {
-      statusMessage.textContent = message;
+    function safeText(value) {
+      return String(value || "");
     }
 
-    function showPlaceholder(type, message) {
-      placeholder.replaceChildren();
-      placeholder.classList.remove("hidden");
+    function isAllowedChannel(channel) {
+      const name = safeText(channel.name).toLowerCase();
 
-      const icon = document.createElement("div");
-      icon.className = "big-icon";
+      const categories = Array.isArray(channel.categories)
+        ? channel.categories.join(" ").toLowerCase()
+        : "";
 
-      const heading = document.createElement("h2");
-      const description = document.createElement("p");
+      const blocked = ["xxx", "porn", "adult", "erotic"];
 
-      if (type === "error") {
-        const row = document.createElement("div");
-        row.className = "error-box";
+      if (channel.is_nsfw === true || channel.isNsfw === true) {
+        return false;
+      }
 
-        const baco = document.createElement("div");
-        baco.className = "baco";
-        baco.textContent = "🐢";
+      if (blocked.some(word => name.includes(word))) return false;
+      if (blocked.some(word => categories.includes(word))) return false;
 
-        const content = document.createElement("div");
-        const title = document.createElement("h2");
-        title.className = "error-title";
-        title.textContent = "⚠ ERROR DE TRANSMISIÓN";
+      return Boolean(channel.id && channel.name);
+    }
 
-        const detail = document.createElement("p");
-        detail.textContent = message || "Baco no pudo conectar con este canal.";
+    async function downloadJSON(url) {
+      const response = await fetch(url, {
+        cache: "no-store"
+      });
 
-        const retry = document.createElement("button");
-        retry.className = "btn primary";
-        retry.type = "button";
-        retry.textContent = "↻ Intentar de nuevo";
-        retry.addEventListener("click", () => {
-          if (retryUrl) playStream(retryUrl);
-        });
+      if (!response.ok) {
+        throw new Error("HTTP " + response.status);
+      }
 
-        content.append(title, detail, retry);
-        row.append(baco, content);
-        placeholder.append(row);
+      return response.json();
+    }
+
+    function countryName(code) {
+      if (!code) return "Internacional";
+
+      try {
+        return new Intl.DisplayNames(["es"], {
+          type: "region"
+        }).of(code.toUpperCase()) || code;
+      } catch {
+        return code;
+      }
+    }
+
+    function getChannelStatus(channel) {
+      return health[channel.id]?.status || "unknown";
+    }
+
+    function getStatusLabel(status) {
+      if (status === "online") return "● ONLINE";
+      if (status === "offline") return "● OFFLINE";
+      return "● UNKNOWN";
+    }
+
+    function updateStats() {
+      $("total-stat").textContent = channels.length;
+
+      $("online-stat").textContent = channels.filter(
+        channel => getChannelStatus(channel) === "online"
+      ).length;
+
+      $("countries-stat").textContent = new Set(
+        channels.map(channel => channel.country).filter(Boolean)
+      ).size;
+    }
+
+    function populateCountries() {
+      const select = $("country-select");
+
+      const countries = [...new Set(
+        channels.map(channel => channel.country).filter(Boolean)
+      )].sort();
+
+      select.innerHTML = '<option value="">Todos los países</option>';
+
+      for (const country of countries) {
+        const option = document.createElement("option");
+        option.value = country;
+        option.textContent = countryName(country);
+        select.appendChild(option);
+      }
+    }
+
+    function getVisibleChannels() {
+      const query = $("search-input").value.trim().toLowerCase();
+      const country = $("country-select").value;
+
+      return channels.filter(channel => {
+        const matchesName =
+          safeText(channel.name).toLowerCase().includes(query);
+
+        const matchesCountry =
+          !country || channel.country === country;
+
+        const matchesFavorite =
+          !favoriteMode || favorites.has(channel.id);
+
+        return matchesName && matchesCountry && matchesFavorite;
+      });
+    }
+
+    function renderChannels() {
+      visibleChannels = getVisibleChannels();
+
+      const container = $("channels-container");
+      container.innerHTML = "";
+
+      $("channel-count").textContent = visibleChannels.length;
+
+      if (!visibleChannels.length) {
+        container.innerHTML =
+          '<div class="empty">No se encontraron canales.</div>';
         return;
       }
 
-      icon.textContent = "📡";
-      heading.textContent = "TELEBACUS READY";
-      description.textContent = message || "Seleccioná un canal del catálogo para comenzar.";
-      placeholder.append(icon, heading, description);
+      visibleChannels.forEach((channel, index) => {
+        const button = document.createElement("button");
+
+        button.className = "channel";
+
+        if (currentChannel?.id === channel.id) {
+          button.classList.add("selected");
+        }
+
+        const number = document.createElement("span");
+        number.className = "channel-number";
+        number.textContent = index + 1;
+
+        const info = document.createElement("span");
+        info.className = "channel-info";
+
+        const name = document.createElement("span");
+        name.className = "channel-name";
+        name.textContent = channel.name;
+
+        const country = document.createElement("span");
+        country.className = "channel-country";
+        country.textContent = countryName(channel.country);
+
+        info.append(name, country);
+
+        const state = document.createElement("span");
+        const status = getChannelStatus(channel);
+
+        state.className = "channel-state " + status;
+        state.textContent = getStatusLabel(status);
+
+        button.append(number, info, state);
+
+        button.addEventListener("click", () => {
+          selectChannel(channel);
+        });
+
+        button.addEventListener("contextmenu", event => {
+          event.preventDefault();
+          toggleFavorite(channel);
+        });
+
+        container.appendChild(button);
+      });
     }
 
-    function clearHls() {
-      if (hls) {
-        hls.destroy();
-        hls = null;
+    function getChannelSources(channel) {
+      const channelStreams = streams.filter(
+        stream => stream.channel === channel.id
+      );
+
+      const checked = health[channel.id]?.sources || [];
+
+      const onlineUrls = new Set(
+        checked
+          .filter(source => source.status === "online")
+          .map(source => source.url)
+      );
+
+      const urls = channelStreams
+        .filter(stream => {
+          try {
+            const url = new URL(stream.url);
+            return ["http:", "https:"].includes(url.protocol);
+          } catch {
+            return false;
+          }
+        })
+        .map(stream => stream.url);
+
+      return [...new Set(urls)].sort((a, b) => {
+        return Number(onlineUrls.has(b)) - Number(onlineUrls.has(a));
+      });
+    }
+
+    function destroyPlayer() {
+      if (currentHls) {
+        currentHls.destroy();
+        currentHls = null;
       }
+
       video.pause();
       video.removeAttribute("src");
       video.load();
     }
 
     function showError(message) {
-      clearHls();
-      showPlaceholder("error", message);
-      setStatus("Error de reproducción");
+      $("player-placeholder").style.display = "none";
+      $("error-message").textContent = message;
+      $("error-panel").classList.add("visible");
+      $("status-message").textContent = "No se pudo reproducir el canal.";
     }
 
-    function safeChannel(channel) {
-      const categories = Array.isArray(channel.categories)
-        ? channel.categories.join(" ").toLowerCase()
-        : "";
-
-      const name = String(channel.name || "").toLowerCase();
-      const blockedWords = ["xxx", "porn", "adult", "erotic"];
-
-      if (channel.isNsfw === true) return false;
-      if (blockedWords.some(word => categories.includes(word))) return false;
-      if (blockedWords.some(word => name.includes(word))) return false;
-
-      return Boolean(channel.id && channel.name);
+    function hideError() {
+      $("error-panel").classList.remove("visible");
     }
 
-    function getStream(channel) {
-      return streams.find(stream =>
-        stream.channel === channel.id &&
-        typeof stream.url === "string" &&
-        /^https?:\/\//i.test(stream.url)
-      );
+    function showPlaceholder() {
+      $("player-placeholder").style.display = "flex";
     }
 
-    async function playStream(url) {
-      if (!url) {
-        showError("No se encontró una dirección de transmisión para este canal.");
+    function selectChannel(channel) {
+      currentChannel = channel;
+      currentSources = getChannelSources(channel);
+      currentAttempt = 0;
+
+      $("current-title").textContent = channel.name;
+      $("status-message").textContent =
+        countryName(channel.country) + " · Preparando transmisión...";
+
+      renderChannels();
+
+      startPlayback();
+    }
+
+    function startPlayback() {
+      if (!currentChannel) return;
+
+      currentAttempt = 0;
+
+      hideError();
+      tryNextSource();
+    }
+
+    function tryNextSource() {
+      if (!currentChannel) return;
+
+      destroyPlayer();
+
+      if (currentAttempt >= currentSources.length) {
+        showError(
+          currentSources.length
+            ? "Se probaron todas las fuentes disponibles y ninguna pudo reproducirse."
+            : "Este canal todavía no tiene fuentes de transmisión registradas."
+        );
         return;
       }
 
-      retryUrl = url;
-      clearHls();
-      placeholder.classList.add("hidden");
-      setStatus("Conectando...");
+      const sourceIndex = currentAttempt++;
+      const source = currentSources[sourceIndex];
 
-      try {
-        if (window.Hls && Hls.isSupported() && /\.m3u8($|\?)/i.test(url)) {
-          hls = new Hls({
-            enableWorker: true,
-            maxBufferLength: 20,
-            manifestLoadingTimeOut: 15000,
-            levelLoadingTimeOut: 15000
-          });
+      const attemptNumber = currentAttempt;
 
-          hls.loadSource(url);
-          hls.attachMedia(video);
+      hideError();
+      $("player-placeholder").style.display = "none";
 
-          hls.on(Hls.Events.MANIFEST_PARSED, async () => {
-            try {
-              await video.play();
-              setStatus("Reproduciendo");
-            } catch {
-              setStatus("Presioná reproducir para iniciar");
-            }
-          });
+      $("status-message").textContent =
+        "Probando fuente " + currentAttempt +
+        " de " + currentSources.length + "...";
 
-          hls.on(Hls.Events.ERROR, (_, data) => {
-            if (data.fatal) {
-              showError("La transmisión no está disponible o el servidor rechazó la conexión.");
-            }
-          });
+      let failed = false;
 
-        } else {
-          video.src = url;
+      function fail() {
+        if (failed || attemptNumber !== currentAttempt) return;
+
+        failed = true;
+
+        $("status-message").textContent =
+          "Fuente no disponible. Probando alternativa...";
+
+        tryNextSource();
+      }
+
+      video.onerror = fail;
+
+      if (window.Hls && Hls.isSupported()) {
+        const hls = new Hls({
+          enableWorker: true,
+          lowLatencyMode: false,
+          manifestLoadingTimeOut: 12000,
+          levelLoadingTimeOut: 12000,
+          fragLoadingTimeOut: 20000,
+          maxBufferLength: 20
+        });
+
+        currentHls = hls;
+
+        hls.loadSource(source);
+        hls.attachMedia(video);
+
+        hls.on(Hls.Events.MANIFEST_PARSED, async () => {
+          if (attemptNumber !== currentAttempt) return;
+
+          $("status-message").textContent =
+            "Fuente cargada · " + (sourceIndex + 1);
 
           try {
             await video.play();
-            setStatus("Reproduciendo");
           } catch {
-            setStatus("Presioná reproducir para iniciar");
+            $("status-message").textContent =
+              "Fuente preparada. Pulsa reproducir.";
           }
-        }
-      } catch {
-        showError("No se pudo iniciar esta transmisión.");
-      }
-    }
+        });
 
-    async function selectChannel(channel) {
-      selectedChannel = channel;
-      currentTitle.textContent = channel.name;
-      document.querySelectorAll(".channel").forEach(element => {
-        element.classList.toggle("selected", element.dataset.id === channel.id);
-      });
+        hls.on(Hls.Events.ERROR, (_, data) => {
+          if (attemptNumber !== currentAttempt) return;
 
-      const stream = getStream(channel);
+          if (data.fatal) {
+            hls.destroy();
 
-      if (!stream) {
-        retryUrl = "";
-        showError("Este canal no tiene una transmisión disponible en el catálogo.");
-        return;
-      }
+            if (currentHls === hls) {
+              currentHls = null;
+            }
 
-      await playStream(stream.url);
-    }
+            fail();
+          }
+        });
 
-    function saveFavorites() {
-      try {
-        localStorage.setItem("telebacus_favs", JSON.stringify(favorites));
-      } catch {
-        setStatus("No se pudieron guardar los favoritos");
-      }
-    }
+      } else if (video.canPlayType("application/vnd.apple.mpegurl")) {
+        video.src = source;
 
-    function toggleFavorite(channel, button) {
-      const exists = favorites.includes(channel.id);
+        video.addEventListener("loadedmetadata", async function onLoaded() {
+          video.removeEventListener("loadedmetadata", onLoaded);
 
-      if (exists) {
-        favorites = favorites.filter(id => id !== channel.id);
+          if (attemptNumber !== currentAttempt) return;
+
+          $("status-message").textContent = "Fuente cargada.";
+
+          try {
+            await video.play();
+          } catch {
+            $("status-message").textContent =
+              "Fuente preparada. Pulsa reproducir.";
+          }
+        });
+
       } else {
-        favorites.push(channel.id);
+        video.src = source;
+      }
+    }
+
+    function toggleFavorite(channel) {
+      if (favorites.has(channel.id)) {
+        favorites.delete(channel.id);
+      } else {
+        favorites.add(channel.id);
       }
 
-      saveFavorites();
-      button.classList.toggle("on", !exists);
-      button.textContent = !exists ? "★" : "☆";
+      localStorage.setItem(
+        "telebacus-favorites",
+        JSON.stringify([...favorites])
+      );
 
-      if (favoritesOnly) renderChannels();
+      renderChannels();
     }
 
-    function renderChannels() {
-      const search = searchInput.value.trim().toLowerCase();
-      const country = countrySelect.value;
+    $("search-input").addEventListener("input", renderChannels);
+    $("country-select").addEventListener("change", renderChannels);
 
-      visibleChannels = channels.filter(channel => {
-        const matchesSearch =
-          channel.name.toLowerCase().includes(search) ||
-          String(channel.country || "").toLowerCase().includes(search);
+    $("all-filter").addEventListener("click", () => {
+      favoriteMode = false;
+      $("all-filter").classList.add("active");
+      $("favorites-filter").classList.remove("active");
+      renderChannels();
+    });
 
-        const matchesCountry = !country || channel.country === country;
-        const matchesFavorite = !favoritesOnly || favorites.includes(channel.id);
+    $("favorites-filter").addEventListener("click", () => {
+      favoriteMode = true;
+      $("favorites-filter").classList.add("active");
+      $("all-filter").classList.remove("active");
+      renderChannels();
+    });
 
-        return matchesSearch && matchesCountry && matchesFavorite;
-      });
+    $("play-button").addEventListener("click", () => {
+      if (!currentChannel) return;
 
-      channelCount.textContent = visibleChannels.length;
-      channelsContainer.replaceChildren();
-
-      if (!visibleChannels.length) {
-        const empty = document.createElement("div");
-        empty.className = "message";
-        empty.textContent = "No se encontraron canales.";
-        channelsContainer.append(empty);
-        return;
+      if (video.paused && video.src) {
+        video.play().catch(() => startPlayback());
+      } else {
+        startPlayback();
       }
+    });
 
-      const fragment = document.createDocumentFragment();
+    $("retry-button").addEventListener("click", startPlayback);
 
-      visibleChannels.forEach((channel, index) => {
-        const item = document.createElement("div");
-        item.className = "channel";
-        item.dataset.id = channel.id;
+    $("fullscreen-button").addEventListener("click", () => {
+      const frame = $("player-frame");
 
-        if (selectedChannel && selectedChannel.id === channel.id) {
-          item.classList.add("selected");
-        }
+      if (document.fullscreenElement) {
+        document.exitFullscreen?.();
+      } else {
+        frame.requestFullscreen?.();
+      }
+    });
 
-        const number = document.createElement("span");
-        number.className = "channel-number";
-        number.textContent = String(index + 1).padStart(2, "0");
+    function dialChannel() {
+      const number = Number($("num-input").value);
 
-        const name = document.createElement("span");
-        name.className = "channel-name";
-        name.textContent = channel.name;
+      if (!Number.isInteger(number) || number < 1) return;
 
-        const countryName = document.createElement("span");
-        countryName.className = "channel-country";
-        countryName.textContent = channel.country || "—";
+      const channel = visibleChannels[number - 1];
 
-        const favorite = document.createElement("button");
-        favorite.className = "favorite" + (favorites.includes(channel.id) ? " on" : "");
-        favorite.type = "button";
-        favorite.textContent = favorites.includes(channel.id) ? "★" : "☆";
-        favorite.setAttribute("aria-label", "Cambiar favorito");
-
-        favorite.addEventListener("click", event => {
-          event.stopPropagation();
-          toggleFavorite(channel, favorite);
-        });
-
-        item.addEventListener("click", () => selectChannel(channel));
-        item.append(number, name, countryName, favorite);
-        fragment.append(item);
-      });
-
-      channelsContainer.append(fragment);
+      if (channel) {
+        selectChannel(channel);
+      } else {
+        $("status-message").textContent =
+          "No existe ese número en la lista visible.";
+      }
     }
 
-    function populateCountries() {
-      const countries = [...new Set(
-        channels.map(channel => channel.country).filter(Boolean)
-      )].sort();
+    $("dial-button").addEventListener("click", dialChannel);
 
-      countrySelect.replaceChildren();
+    $("num-input").addEventListener("keydown", event => {
+      if (event.key === "Enter") dialChannel();
+    });
 
-      const all = document.createElement("option");
-      all.value = "";
-      all.textContent = "Todos los países";
-      countrySelect.append(all);
+    video.addEventListener("playing", () => {
+      $("status-message").textContent = "● REPRODUCIENDO EN DIRECTO";
+      hideError();
+    });
 
-      countries.forEach(country => {
-        const option = document.createElement("option");
-        option.value = country;
-        option.textContent = country;
-        countrySelect.append(option);
-      });
-    }
+    video.addEventListener("waiting", () => {
+      $("status-message").textContent = "Cargando transmisión...";
+    });
 
-    async function fetchCatalog(url) {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 20000);
+    video.addEventListener("ended", () => {
+      if (currentHls) return;
+      tryNextSource();
+    });
 
+    async function initialize() {
       try {
-        const response = await fetch(url, {
-          signal: controller.signal,
-          cache: "no-cache"
-        });
+        $("status-message").textContent =
+          "Conectando con el catálogo mundial...";
 
-        if (!response.ok) throw new Error("HTTP " + response.status);
-        return await response.json();
-      } finally {
-        clearTimeout(timeout);
-      }
-    }
-
-    async function loadCatalog() {
-      channelsContainer.innerHTML =
-        '<div class="message">Conectando con el catálogo...</div>';
-
-      try {
-        const [channelData, streamData] = await Promise.all([
-          fetchCatalog(API_CHANNELS),
-          fetchCatalog(API_STREAMS)
+        const results = await Promise.allSettled([
+          downloadJSON(API_CHANNELS),
+          downloadJSON(API_STREAMS),
+          downloadJSON(HEALTH_URL)
         ]);
 
-        channels = channelData.filter(safeChannel);
-        streams = streamData.filter(stream =>
-          stream &&
-          typeof stream.channel === "string" &&
-          typeof stream.url === "string" &&
-          /^https?:\/\//i.test(stream.url)
-        );
+        if (results[0].status !== "fulfilled") {
+          throw new Error("No se pudo descargar el catálogo de canales.");
+        }
+
+        if (results[1].status !== "fulfilled") {
+          throw new Error("No se pudo descargar el catálogo de transmisiones.");
+        }
+
+        channels = results[0].value.filter(isAllowedChannel);
+        streams = results[1].value;
+
+        health = results[2].status === "fulfilled"
+          ? (results[2].value.channels || {})
+          : {};
 
         populateCountries();
+        updateStats();
         renderChannels();
-        setStatus("Catálogo conectado");
-      } catch {
-        channelsContainer.replaceChildren();
 
-        const error = document.createElement("div");
-        error.className = "message";
-        error.textContent = "No se pudo cargar el catálogo. Revisá tu conexión e intentá actualizar.";
-        channelsContainer.append(error);
+        $("status-message").textContent =
+          "Catálogo mundial cargado correctamente.";
 
-        setStatus("Error al cargar el catálogo");
+      } catch (error) {
+        console.error(error);
+
+        $("channels-container").innerHTML =
+          '<div class="empty">No se pudo cargar el catálogo. Comprueba tu conexión e inténtalo de nuevo.</div>';
+
+        $("status-message").textContent = error.message;
       }
     }
-
-    document.getElementById("all-filter").addEventListener("click", () => {
-      favoritesOnly = false;
-      document.getElementById("all-filter").classList.add("active");
-      document.getElementById("favorites-filter").classList.remove("active");
-      renderChannels();
-    });
-
-    document.getElementById("favorites-filter").addEventListener("click", () => {
-      favoritesOnly = true;
-      document.getElementById("favorites-filter").classList.add("active");
-      document.getElementById("all-filter").classList.remove("active");
-      renderChannels();
-    });
-
-    searchInput.addEventListener("input", renderChannels);
-    countrySelect.addEventListener("change", renderChannels);
-
-    document.getElementById("play-button").addEventListener("click", async () => {
-      if (retryUrl) {
-        await playStream(retryUrl);
-      } else if (selectedChannel) {
-        await selectChannel(selectedChannel);
-      } else {
-        setStatus("Primero seleccioná un canal");
-      }
-    });
-
-    document.getElementById("fullscreen-button").addEventListener("click", async () => {
-      const frame = document.getElementById("player-frame");
-
-      try {
-        if (document.fullscreenElement) {
-          await document.exitFullscreen();
-        } else if (frame.requestFullscreen) {
-          await frame.requestFullscreen();
-        } else if (video.webkitEnterFullscreen) {
-          video.webkitEnterFullscreen();
-        }
-      } catch {
-        setStatus("No se pudo activar pantalla completa");
-      }
-    });
-
-    document.getElementById("dial-button").addEventListener("click", () => {
-      const number = Number(document.getElementById("num-input").value);
-
-      if (!Number.isInteger(number) || number < 1 || number > visibleChannels.length) {
-        setStatus("Número de canal no válido");
-        return;
-      }
-
-      selectChannel(visibleChannels[number - 1]);
-    });
-
-    video.addEventListener("error", () => {
-      if (!hls) showError("El reproductor no pudo abrir esta transmisión.");
-    });
-
-    loadCatalog();
 
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
-        navigator.serviceWorker.register("./sw.js").catch(() => {
-          console.warn("No se pudo registrar el service worker.");
-        });
+        navigator.serviceWorker.register("./sw.js")
+          .catch(error => console.warn("Service Worker:", error));
       });
     }
+
+    initialize();
   </script>
 </body>
 </html>
