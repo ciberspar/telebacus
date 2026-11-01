@@ -1,6 +1,6 @@
 "use strict";
 
-const CACHE_NAME = "telebacus-cyber-v2";
+const CACHE_NAME = "telebacus-global-v3";
 
 const APP_FILES = [
   "./",
@@ -31,13 +31,13 @@ self.addEventListener("activate", event => {
 
 self.addEventListener("fetch", event => {
   const request = event.request;
-
-  if (request.method !== "GET") return;
-
   const url = new URL(request.url);
 
-  // No interceptar catálogos ni transmisiones externas.
+  if (request.method !== "GET") return;
   if (url.origin !== self.location.origin) return;
+
+  // El estado de las transmisiones nunca debe quedar obsoleto.
+  if (url.pathname.endsWith("/health.json")) return;
 
   event.respondWith(
     fetch(request)
